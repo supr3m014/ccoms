@@ -2,14 +2,9 @@
 
 import { useState, FormEvent, useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 import CTAButtons from '@/components/CTAButtons'
 import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle } from 'lucide-react'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 function AnimatedSection({ children, className = "" }: { children: React.ReactNode, className?: string }) {
   const ref = useRef(null)
@@ -46,6 +41,10 @@ export default function ContactPage() {
     setError(null)
 
     try {
+      if (!supabase) {
+        throw new Error('Database connection not available')
+      }
+
       const { error: submitError } = await supabase
         .from('contact_submissions')
         .insert([

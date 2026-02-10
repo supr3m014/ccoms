@@ -39,7 +39,7 @@ export default function SEOScriptsPage() {
       const scriptsData = data || []
       setScripts(scriptsData)
 
-      scriptsData.forEach(script => {
+      scriptsData.forEach((script: any) => {
         if (script.location === 'head') setHeadScript(script.script_content)
         if (script.location === 'body_start') setBodyScript(script.script_content)
         if (script.location === 'footer') setFooterScript(script.script_content)

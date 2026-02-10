@@ -41,8 +41,8 @@ export default function SEOMetaPage() {
         supabase.from('posts').select('id, title, slug, meta_title, meta_description, published_at, updated_at').order('updated_at', { ascending: false })
       ])
 
-      const pagesData = (pagesResult.data || []).map(p => ({ ...p, type: 'page' as const }))
-      const postsData = (postsResult.data || []).map(p => ({ ...p, type: 'post' as const }))
+      const pagesData = (pagesResult.data || []).map((p: any) => ({ ...p, type: 'page' as const }))
+      const postsData = (postsResult.data || []).map((p: any) => ({ ...p, type: 'post' as const }))
 
       const allItems = [...pagesData, ...postsData].sort((a, b) =>
         new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()

@@ -23,6 +23,11 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function fetchStats() {
+      if (!supabase) {
+        setLoading(false)
+        return
+      }
+
       try {
         const [blogRes, casesRes, teamRes, contactRes] = await Promise.all([
           supabase.from('blog_posts').select('id', { count: 'exact', head: true }),

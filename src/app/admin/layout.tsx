@@ -150,6 +150,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         return
       }
 
+      if (!supabase) {
+        setSearching(false)
+        return
+      }
+
       setSearching(true)
       try {
         const searchTerm = searchQuery.toLowerCase()
@@ -162,10 +167,10 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         ])
 
         const results = [
-          ...(pagesResult.data || []).map(p => ({ ...p, type: 'page', href: `/admin/pages` })),
-          ...(postsResult.data || []).map(p => ({ ...p, type: 'post', href: `/admin/posts` })),
-          ...(categoriesResult.data || []).map(c => ({ ...c, type: 'category', href: `/admin/${c.type}s/categories` })),
-          ...(tagsResult.data || []).map(t => ({ ...t, type: 'tag', href: `/admin/${t.type}s/tags` }))
+          ...(pagesResult.data || []).map((p: any) => ({ ...p, type: 'page', href: `/admin/pages` })),
+          ...(postsResult.data || []).map((p: any) => ({ ...p, type: 'post', href: `/admin/posts` })),
+          ...(categoriesResult.data || []).map((c: any) => ({ ...c, type: 'category', href: `/admin/${c.type}s/categories` })),
+          ...(tagsResult.data || []).map((t: any) => ({ ...t, type: 'tag', href: `/admin/${t.type}s/tags` }))
         ]
 
         setSearchResults(results)

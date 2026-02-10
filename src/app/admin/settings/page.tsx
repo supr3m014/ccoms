@@ -30,7 +30,7 @@ export default function SettingsPage() {
 
       if (error) throw error;
 
-      const formattedUsers: User[] = authUsers.map(user => ({
+      const formattedUsers: User[] = authUsers.map((user: any) => ({
         id: user.id,
         email: user.email || '',
         created_at: user.created_at,

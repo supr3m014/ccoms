@@ -247,7 +247,7 @@ export default function RedirectsPage() {
 
       const csvContent = [
         'redirect_from,redirect_to,status_code',
-        ...(data || []).map(r => `${r.redirect_from},${r.redirect_to},${r.status_code}`)
+        ...(data || []).map((r: any) => `${r.redirect_from},${r.redirect_to},${r.status_code}`)
       ].join('\n')
 
       const blob = new Blob([csvContent], { type: 'text/csv' })
