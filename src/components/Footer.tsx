@@ -18,7 +18,6 @@ export default function Footer() {
   const company = [
     { href: '/about', label: 'About' },
     { href: '/case-studies', label: 'Case Studies' },
-    { href: '/blog', label: 'Blog' },
     { href: '/contact', label: 'Contact' },
   ]
 
@@ -38,7 +37,7 @@ export default function Footer() {
             <p className="text-neutral-400 mb-4">
               Core Conversion Digital Marketing Services - Technical execution that drives measurable growth.
             </p>
-            <div className="flex space-x-4">
+            {/* <div className="flex space-x-4">
               <a
                 href="https://linkedin.com"
                 target="_blank"
@@ -66,7 +65,7 @@ export default function Footer() {
               >
                 <Facebook className="w-5 h-5" />
               </a>
-            </div>
+            </div> */}
           </motion.div>
 
           <motion.div

@@ -140,7 +140,7 @@ export default function ServicesPage() {
                 Choose your path
               </h2>
               <p className="text-xl text-gray-600 leading-relaxed">
-                Start with the service—or start with the goal. If you already know what you need, pick a service below. If you're unsure, book a call and we'll recommend the fastest route to measurable improvement.
+                Start with the service—or start with the goal. If you already know what you need, pick a service below. If you're unsure, <Link href="https://calendar.app.google/sSZytJFNEdDVeZ8k8" target="_blank" className="text-blue-600 font-semibold hover:underline">book a call</Link> and we'll recommend the fastest route to measurable improvement.
               </p>
             </div>
           </AnimatedSection>
@@ -312,7 +312,7 @@ export default function ServicesPage() {
                 Book a discovery call and we'll identify what's holding you back, what will move the needle fastest, and what a tailored execution plan should look like.
               </p>
 
-              <a href="/contact" className="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+              <a href="https://calendar.app.google/sSZytJFNEdDVeZ8k8" target="_blank" className="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
                 Book a Discovery Call
               </a>
             </AnimatedSection>

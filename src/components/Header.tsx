@@ -22,18 +22,16 @@ export default function Header() {
     { href: '/', label: 'Home' },
     { href: '/services', label: 'Services' },
     { href: '/case-studies', label: 'Case Studies' },
-    { href: '/blog', label: 'Blog' },
     { href: '/about', label: 'About' },
     { href: '/contact', label: 'Contact' },
   ]
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white shadow-md py-4'
-          : 'bg-white/80 backdrop-blur-md shadow-sm py-4'
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+        ? 'bg-white shadow-md py-4'
+        : 'bg-white/80 backdrop-blur-md shadow-sm py-4'
+        }`}
     >
       <nav className="container-custom">
         <div className="flex items-center justify-between">
@@ -71,10 +69,10 @@ export default function Header() {
             transition={{ duration: 0.5 }}
             className="hidden lg:flex items-center gap-3"
           >
-            <Link href="/admin/login" className="text-gray-700 hover:text-blue-600 font-semibold transition-colors">
+            {/* <Link href="/admin/login" className="text-gray-700 hover:text-blue-600 font-semibold transition-colors">
               Login
-            </Link>
-            <Link href="#book-discovery-call" className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 inline-block">
+            </Link> */}
+            <Link href="https://calendar.app.google/sSZytJFNEdDVeZ8k8" target="_blank" className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 inline-block">
               Book a Call
             </Link>
           </motion.div>
@@ -112,15 +110,16 @@ export default function Header() {
                     {link.label}
                   </Link>
                 ))}
-                <Link
+                {/* <Link
                   href="/admin/login"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="text-gray-700 hover:text-blue-600 font-semibold transition-colors py-2"
                 >
                   Login
-                </Link>
+                </Link> */}
                 <Link
-                  href="#book-discovery-call"
+                  href="https://calendar.app.google/sSZytJFNEdDVeZ8k8"
+                  target="_blank"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="btn btn-primary text-center"
                 >

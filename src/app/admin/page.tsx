@@ -30,7 +30,7 @@ export default function AdminDashboard() {
 
       try {
         const [blogRes, casesRes, teamRes, contactRes] = await Promise.all([
-          supabase.from('blog_posts').select('id', { count: 'exact', head: true }),
+          supabase.from('posts').select('id', { count: 'exact', head: true }),
           supabase.from('case_studies').select('id', { count: 'exact', head: true }),
           supabase.from('team_members').select('id', { count: 'exact', head: true }),
           supabase.from('contact_submissions').select('id', { count: 'exact', head: true }),
@@ -58,7 +58,7 @@ export default function AdminDashboard() {
       value: stats.blogPosts,
       icon: FileText,
       color: 'from-blue-600 to-cyan-600',
-      href: '/admin/blog',
+      href: '/admin/posts',
     },
     {
       name: 'Case Studies',
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
           <div className="space-y-3">
             <Link
-              href="/admin/blog/new"
+              href="/admin/posts/new"
               className="block p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
             >
               <p className="font-semibold text-blue-900">Create New Blog Post</p>
