@@ -11,7 +11,8 @@ dist
 dist-ssr
 *.local
 
-.next
+# .next folder removed to allow Path A deployment
+# .next
 .env
 
 .vscode/*
