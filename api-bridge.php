@@ -488,7 +488,7 @@ function table_delete($conn, $table, $input) {
 $path = explode('?', $request_uri);
 $path = trim($path[0], '/');
 
-if (strpos($path, 'auth') !== false) {
+if (isset($_GET['action'])) {
   echo json_encode(route_auth());
 } elseif (isset($_GET['table'])) {
   echo json_encode(route_table());
