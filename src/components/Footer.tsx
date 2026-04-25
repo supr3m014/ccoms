@@ -101,7 +101,7 @@ export default function Footer() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="hover:text-primary-400 transition-colors"
+                    className="text-neutral-300 hover:text-primary-400 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -120,13 +120,13 @@ export default function Footer() {
             <ul className="space-y-3">
               <li className="flex items-start space-x-3">
                 <Mail className="w-5 h-5 text-primary-400 mt-0.5 flex-shrink-0" />
-                <a href="mailto:hello@ccoms.ph" className="hover:text-primary-400 transition-colors">
+                <a href="mailto:hello@ccoms.ph" className="text-neutral-300 hover:text-primary-400 transition-colors">
                   hello@ccoms.ph
                 </a>
               </li>
               <li className="flex items-start space-x-3">
                 <Phone className="w-5 h-5 text-primary-400 mt-0.5 flex-shrink-0" />
-                <a href="tel:+639922981422" className="hover:text-primary-400 transition-colors">
+                <a href="tel:+639922981422" className="text-neutral-300 hover:text-primary-400 transition-colors">
                   +63 992 298 1422
                 </a>
               </li>
@@ -144,10 +144,10 @@ export default function Footer() {
               &copy; {currentYear} Core Conversion Digital Marketing Services. All rights reserved. soothsayerpg
             </p>
             <div className="flex space-x-6 text-sm">
-              <Link href="/privacy" className="hover:text-primary-400 transition-colors">
+              <Link href="/privacy" className="text-neutral-300 hover:text-primary-400 transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="hover:text-primary-400 transition-colors">
+              <Link href="/terms" className="text-neutral-300 hover:text-primary-400 transition-colors">
                 Terms of Service
               </Link>
             </div>
