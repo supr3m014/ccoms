@@ -2,7 +2,16 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { User, Session } from '@supabase/supabase-js'
+
+// Local auth types replacing @supabase/supabase-js
+interface User {
+  id: string | number
+  email: string
+}
+
+interface Session {
+  user: User
+}
 
 interface AuthContextType {
   user: User | null

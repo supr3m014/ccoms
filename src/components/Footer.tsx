@@ -80,7 +80,7 @@ export default function Footer() {
                 <li key={service.href}>
                   <Link
                     href={service.href}
-                    className="hover:text-primary-400 transition-colors"
+                    className="text-neutral-300 hover:text-primary-400 transition-colors"
                   >
                     {service.label}
                   </Link>
