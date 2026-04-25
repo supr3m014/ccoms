@@ -69,10 +69,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) {
       return { error: new Error('Database connection not available') }
     }
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
+    if (!error && data?.user) {
+      setUser(data.user)
+      setSession({ user: data.user })
+    }
     return { error }
   }
 

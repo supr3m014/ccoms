@@ -300,18 +300,34 @@ class QueryBuilder implements PromiseLike<any> {
   }
 }
 
+// Dev mode check
+const IS_DEV = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+const DEV_USER = { id: 1, email: 'paul@ccoms.ph', role: 'admin' }
+
 // Main PhpBridge class
 class PhpBridge {
   auth = {
     signInWithPassword: async (credentials: { email: string; password: string }) => {
+      // Dev bypass for localhost
+      if (IS_DEV) {
+        if (credentials.email === 'paul@ccoms.ph') {
+          return { data: { user: DEV_USER, session: { user: DEV_USER } }, error: null }
+        }
+        return { data: null, error: { message: 'Invalid email or password' } }
+      }
       return _post(`${API_BASE_URL}?action=sign-in`, credentials)
     },
 
     signOut: async () => {
+      if (IS_DEV) return { data: null, error: null }
       return _post(`${API_BASE_URL}?action=sign-out`, {})
     },
 
     getSession: async () => {
+      // Dev bypass for localhost
+      if (IS_DEV) {
+        return { data: { session: { user: DEV_USER } } }
+      }
       const response = await fetch(`${API_BASE_URL}?action=session`, { credentials: 'include' })
       const data = await response.json()
       // Normalize: return { data: { session: ... } }
@@ -325,6 +341,10 @@ class PhpBridge {
 
     onAuthStateChange: (callback: any) => {
       // Immediately call once with current session to simulate Supabase behavior
+      if (IS_DEV) {
+        callback('INITIAL_SESSION', { user: DEV_USER })
+        return { data: { subscription: { unsubscribe: () => {} } } }
+      }
       fetch(`${API_BASE_URL}?action=session`, { credentials: 'include' })
         .then(r => r.json())
         .then(data => {
