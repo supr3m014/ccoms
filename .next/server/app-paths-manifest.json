@@ -1,11 +1,7 @@
 {
-  "/admin/support/page": "app/admin/support/page.js",
+  "/admin/seo/scripts/page": "app/admin/seo/scripts/page.js",
   "/admin/posts/page": "app/admin/posts/page.js",
-  "/admin/pages/categories/page": "app/admin/pages/categories/page.js",
-  "/admin/media/page": "app/admin/media/page.js",
-  "/admin/profile/page": "app/admin/profile/page.js",
+  "/admin/support/page": "app/admin/support/page.js",
   "/admin/users/page": "app/admin/users/page.js",
-  "/admin/tools/page": "app/admin/tools/page.js",
-  "/admin/seo/meta/page": "app/admin/seo/meta/page.js",
-  "/admin/seo/scripts/page": "app/admin/seo/scripts/page.js"
+  "/admin/media/page": "app/admin/media/page.js"
 }
