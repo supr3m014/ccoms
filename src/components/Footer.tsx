@@ -141,7 +141,7 @@ export default function Footer() {
         <div className="border-t border-neutral-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-neutral-400 text-sm">
-              &copy; {currentYear} Core Conversion Digital Marketing Services. All rights reserved.
+              &copy; {currentYear} Core Conversion Digital Marketing Services. All rights reserved. soothsayerpg
             </p>
             <div className="flex space-x-6 text-sm">
               <Link href="/privacy" className="hover:text-primary-400 transition-colors">
