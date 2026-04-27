@@ -24,3 +24,10 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Local development only (XAMPP/Docker)
+docker-compose.yml
+docker-php.conf
+database-complete.sql
+ccoms.db
+.env.local

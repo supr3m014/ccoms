@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Mail, Phone, Building, Calendar, Trash2 } from 'lucide-react'
+import { useToast } from '@/contexts/ToastContext'
+import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface ContactSubmission {
   id: string
@@ -15,6 +17,8 @@ interface ContactSubmission {
 }
 
 export default function ContactSubmissions() {
+  const { showToast } = useToast()
+  const { showConfirm } = useConfirm()
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedSubmission, setSelectedSubmission] = useState<ContactSubmission | null>(null)
@@ -40,7 +44,8 @@ export default function ContactSubmissions() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Are you sure you want to delete this submission?')) return
+    const ok = await showConfirm('Are you sure you want to delete this submission?', { destructive: true })
+    if (!ok) return
 
     try {
       const { error } = await supabase.from('contact_submissions').delete().eq('id', id)
@@ -49,7 +54,7 @@ export default function ContactSubmissions() {
       setSelectedSubmission(null)
     } catch (error) {
       console.error('Error deleting submission:', error)
-      alert('Failed to delete submission')
+      showToast('Failed to delete submission', 'error')
     }
   }
 

@@ -5,11 +5,13 @@ import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import { Save } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 
 export default function EditPostPage() {
   const router = useRouter()
   const params = useParams()
   const { user } = useAuth()
+  const { showToast } = useToast()
   const postId = params.id as string
 
   const [post, setPost] = useState<any>(null)
@@ -64,7 +66,7 @@ export default function EditPostPage() {
 
   const handleSave = async (newStatus: string = status) => {
     if (!title.trim()) {
-      alert('Please enter a title')
+      showToast('Please enter a title', 'warning')
       return
     }
 
@@ -89,20 +91,20 @@ export default function EditPostPage() {
           .eq('id', postId)
 
         if (error) throw error
-        alert('Post updated successfully!')
+        showToast('Post updated successfully!', 'success')
       } else {
         const { error } = await supabase
           .from('posts')
           .insert([{ ...postData, author_id: user?.id }])
 
         if (error) throw error
-        alert('Post created successfully!')
+        showToast('Post created successfully!', 'success')
       }
 
       router.push('/admin/posts')
     } catch (error) {
       console.error('Error saving post:', error)
-      alert('Failed to save post')
+      showToast('Failed to save post', 'error')
     } finally {
       setSaving(false)
     }

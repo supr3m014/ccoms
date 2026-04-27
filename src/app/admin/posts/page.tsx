@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Edit, Trash2, Eye, Clock, CheckCircle, FileText } from 'lucide-react'
+import { useToast } from '@/contexts/ToastContext'
+import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface Post {
   id: string
@@ -17,6 +19,8 @@ interface Post {
 }
 
 export default function AllPostsPage() {
+  const { showToast } = useToast()
+  const { showConfirm } = useConfirm()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -42,7 +46,8 @@ export default function AllPostsPage() {
   }
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Are you sure you want to delete "${title}"?`)) return
+    const ok = await showConfirm(`Are you sure you want to delete "${title}"?`, { destructive: true })
+    if (!ok) return
 
     try {
       const { error } = await supabase
@@ -54,7 +59,7 @@ export default function AllPostsPage() {
       fetchPosts()
     } catch (error) {
       console.error('Error deleting post:', error)
-      alert('Failed to delete post')
+      showToast('Failed to delete post', 'error')
     }
   }
 

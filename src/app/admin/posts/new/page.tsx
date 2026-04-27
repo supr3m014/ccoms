@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Save, Eye, Calendar, Lock, Globe, Upload, X, Plus } from 'lucide-react'
+import { Save, Eye, Calendar, Lock, Globe, Upload, X, Plus, Images } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
+import MediaPicker from '@/components/admin/MediaPicker'
 
 interface Category {
   id: string
@@ -19,6 +21,7 @@ interface Tag {
 export default function NewPostPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { showToast } = useToast()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [excerpt, setExcerpt] = useState('')
@@ -34,6 +37,8 @@ export default function NewPostPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [featuredImage, setFeaturedImage] = useState('')
+  const [showMediaPicker, setShowMediaPicker] = useState(false)
+  const [slugTouched, setSlugTouched] = useState(false)
   const [scheduledDate, setScheduledDate] = useState('')
   const [scheduledTime, setScheduledTime] = useState('')
   const [showAddCategory, setShowAddCategory] = useState(false)
@@ -66,47 +71,37 @@ export default function NewPostPage() {
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return
-
+    const tempId = crypto.randomUUID()
+    const slug = newCategoryName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('categories')
-        .insert([{ name: newCategoryName.trim(), type: 'post' }])
-        .select()
-
+        .insert([{ id: tempId, name: newCategoryName.trim(), slug, type: 'post' }])
       if (error) throw error
-
-      if (data && data[0]) {
-        setCategories([...categories, data[0]])
-        setSelectedCategories([...selectedCategories, data[0].id])
-        setNewCategoryName('')
-        setShowAddCategory(false)
-      }
+      setCategories([...categories, { id: tempId, name: newCategoryName.trim() }])
+      setSelectedCategories([...selectedCategories, tempId])
+      setNewCategoryName('')
+      setShowAddCategory(false)
     } catch (error) {
-      console.error('Error adding category:', error)
-      alert('Failed to add category')
+      showToast('Failed to add category', 'error')
     }
   }
 
   const handleAddTag = async () => {
     if (!newTagName.trim()) return
-
+    const tempId = crypto.randomUUID()
+    const slug = newTagName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('tags')
-        .insert([{ name: newTagName.trim(), type: 'post' }])
-        .select()
-
+        .insert([{ id: tempId, name: newTagName.trim(), slug, type: 'post' }])
       if (error) throw error
-
-      if (data && data[0]) {
-        setTags([...tags, data[0]])
-        setSelectedTags([...selectedTags, data[0].id])
-        setNewTagName('')
-        setShowAddTag(false)
-      }
+      setTags([...tags, { id: tempId, name: newTagName.trim() }])
+      setSelectedTags([...selectedTags, tempId])
+      setNewTagName('')
+      setShowAddTag(false)
     } catch (error) {
-      console.error('Error adding tag:', error)
-      alert('Failed to add tag')
+      showToast('Failed to add tag', 'error')
     }
   }
 
@@ -123,19 +118,17 @@ export default function NewPostPage() {
 
   const handleTitleChange = (value: string) => {
     setTitle(value)
-    if (!slug) {
-      setSlug(generateSlug(value))
-    }
+    if (!slugTouched) setSlug(generateSlug(value))
   }
 
   const handleSave = async (newStatus: string = status) => {
     if (!title.trim()) {
-      alert('Please enter a title')
+      showToast('Please enter a title', 'warning')
       return
     }
 
     if (newStatus === 'scheduled' && (!scheduledDate || !scheduledTime)) {
-      alert('Please set a scheduled date and time')
+      showToast('Please set a scheduled date and time', 'warning')
       return
     }
 
@@ -170,11 +163,11 @@ export default function NewPostPage() {
 
       if (error) throw error
 
-      alert(`Post ${newStatus === 'published' ? 'published' : newStatus === 'scheduled' ? 'scheduled' : 'saved'} successfully!`)
+      showToast(`Post ${newStatus === 'published' ? 'published' : newStatus === 'scheduled' ? 'scheduled' : 'saved'} successfully!`, 'success')
       router.push('/admin/posts')
     } catch (error: any) {
       console.error('Error saving post:', error)
-      alert(error.message || 'Failed to save post')
+      showToast(error.message || 'Failed to save post', 'error')
     } finally {
       setSaving(false)
     }
@@ -182,6 +175,10 @@ export default function NewPostPage() {
 
   return (
     <div className="p-8">
+      {showMediaPicker && (
+        <MediaPicker onSelect={url => { setFeaturedImage(url); setShowMediaPicker(false) }} onClose={() => setShowMediaPicker(false)} />
+      )}
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Post</h1>
         <p className="text-gray-600">Create a new blog post</p>
@@ -199,14 +196,14 @@ export default function NewPostPage() {
             />
 
             <div className="mb-4">
-              <label className="text-sm text-gray-600">Slug:</label>
-              <input
-                type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                placeholder="post-slug"
-                className="w-full mt-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <label className="text-sm text-gray-500 font-medium">Slug:</label>
+              <div className="flex items-center mt-1 border border-gray-300 rounded focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden">
+                <span className="px-3 py-2 bg-gray-50 text-gray-400 text-sm border-r border-gray-300 shrink-0">/</span>
+                <input type="text" value={slug}
+                  onChange={e => { setSlug(e.target.value); setSlugTouched(true) }}
+                  placeholder="post-slug"
+                  className="flex-1 px-3 py-2 focus:outline-none text-sm" />
+              </div>
             </div>
 
             <textarea
@@ -350,32 +347,40 @@ export default function NewPostPage() {
             <h3 className="font-semibold text-gray-900 mb-4">Featured Image</h3>
             {featuredImage ? (
               <div className="relative">
-                <img src={featuredImage} alt="Featured" className="w-full h-40 object-cover rounded" />
-                <button
-                  onClick={() => setFeaturedImage('')}
-                  className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
-                >
+                <img src={featuredImage} alt="Featured" className="w-full h-40 object-cover rounded-lg" />
+                <button onClick={() => setFeaturedImage('')}
+                  className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700">
                   <X className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <label className="block w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
-                <div className="flex flex-col items-center justify-center h-full">
-                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-600">Upload Image</span>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                <button onClick={() => setShowMediaPicker(true)}
+                  className="w-full py-6 flex flex-col items-center gap-2 hover:bg-blue-50 hover:border-blue-400 transition-colors text-gray-500 hover:text-blue-600">
+                  <Images className="w-8 h-8" />
+                  <span className="text-sm font-medium">Choose from Media Library</span>
+                </button>
+                <div className="border-t border-dashed border-gray-300">
+                  <label className="w-full py-4 flex flex-col items-center gap-1 cursor-pointer hover:bg-gray-50 transition-colors text-gray-400">
+                    <Upload className="w-5 h-5" />
+                    <span className="text-xs">Or upload from computer</span>
+                    <input type="file" accept="image/*"
+                      onChange={async e => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        const formData = new FormData()
+                        formData.append('file', file)
+                        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}?action=upload`, { method: 'POST', body: formData })
+                        const data = await res.json()
+                        if (data.url) {
+                          await supabase.from('media').insert([{ filename: file.name, file_url: data.url, file_type: 'image', file_size: file.size }])
+                          setFeaturedImage(data.url)
+                        }
+                      }}
+                      className="hidden" />
+                  </label>
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      setFeaturedImage(URL.createObjectURL(file))
-                    }
-                  }}
-                  className="hidden"
-                />
-              </label>
+              </div>
             )}
           </div>
 

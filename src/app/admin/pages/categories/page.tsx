@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Search } from 'lucide-react'
+import { useToast } from '@/contexts/ToastContext'
+import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface Category {
   id: string
@@ -13,6 +15,8 @@ interface Category {
 }
 
 export default function PageCategoriesPage() {
+  const { showToast } = useToast()
+  const { showConfirm } = useConfirm()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
@@ -63,7 +67,7 @@ export default function PageCategoriesPage() {
     e.preventDefault()
 
     if (!name.trim()) {
-      alert('Please enter a category name')
+      showToast('Please enter a category name', 'warning')
       return
     }
 
@@ -85,14 +89,16 @@ export default function PageCategoriesPage() {
       setSlug('')
       setDescription('')
       fetchCategories()
+      showToast('Category added successfully!', 'success')
     } catch (error: any) {
       console.error('Error saving category:', error)
-      alert(error.message || 'Failed to save category')
+      showToast(error.message || 'Failed to save category', 'error')
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this category?')) return
+    const ok = await showConfirm('Are you sure you want to delete this category?', { destructive: true })
+    if (!ok) return
 
     try {
       const { error } = await supabase
@@ -105,17 +111,18 @@ export default function PageCategoriesPage() {
       setSelectedCategories(selectedCategories.filter(catId => catId !== id))
     } catch (error) {
       console.error('Error deleting category:', error)
-      alert('Failed to delete category')
+      showToast('Failed to delete category', 'error')
     }
   }
 
   const handleBulkDelete = async () => {
     if (selectedCategories.length === 0) {
-      alert('Please select categories to delete')
+      showToast('Please select categories to delete', 'warning')
       return
     }
 
-    if (!confirm(`Are you sure you want to delete ${selectedCategories.length} category(ies)?`)) return
+    const ok = await showConfirm(`Are you sure you want to delete ${selectedCategories.length} category(ies)?`, { destructive: true })
+    if (!ok) return
 
     try {
       const { error } = await supabase
@@ -128,7 +135,7 @@ export default function PageCategoriesPage() {
       setSelectedCategories([])
     } catch (error) {
       console.error('Error deleting categories:', error)
-      alert('Failed to delete categories')
+      showToast('Failed to delete categories', 'error')
     }
   }
 
@@ -241,15 +248,9 @@ export default function PageCategoriesPage() {
                           className="rounded"
                         />
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Slug
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Count
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">

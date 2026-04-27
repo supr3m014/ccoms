@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, Images, X, Upload } from 'lucide-react'
 import Link from 'next/link'
+import { useToast } from '@/contexts/ToastContext'
+import MediaPicker from '@/components/admin/MediaPicker'
 
 interface PageData {
     id: string
@@ -22,7 +24,9 @@ interface PageData {
 
 export default function EditPageClient({ id }: { id: string }) {
     const router = useRouter()
+    const { showToast } = useToast()
     const [loading, setLoading] = useState(true)
+    const [showMediaPicker, setShowMediaPicker] = useState(false)
     const [saving, setSaving] = useState(false)
     const [formData, setFormData] = useState<PageData>({
         id: '',
@@ -54,7 +58,7 @@ export default function EditPageClient({ id }: { id: string }) {
             if (data) setFormData(data)
         } catch (error) {
             console.error('Error fetching page:', error)
-            alert('Failed to load page')
+            showToast('Failed to load page', 'error')
         } finally {
             setLoading(false)
         }
@@ -89,11 +93,11 @@ export default function EditPageClient({ id }: { id: string }) {
 
             if (error) throw error
 
-            alert('Page updated successfully!')
+            showToast('Page updated successfully!', 'success')
             router.push('/admin/pages')
         } catch (error) {
             console.error('Error updating page:', error)
-            alert('Failed to update page')
+            showToast('Failed to update page', 'error')
         } finally {
             setSaving(false)
         }
@@ -109,6 +113,12 @@ export default function EditPageClient({ id }: { id: string }) {
 
     return (
         <div className="p-8">
+            {showMediaPicker && (
+                <MediaPicker
+                    onSelect={url => { setFormData(f => ({ ...f, og_image: url })); setShowMediaPicker(false) }}
+                    onClose={() => setShowMediaPicker(false)}
+                />
+            )}
             <div className="mb-8">
                 <Link
                     href="/admin/pages"
@@ -240,16 +250,24 @@ export default function EditPageClient({ id }: { id: string }) {
                     </div>
 
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            OG Image URL
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.og_image || ''}
-                            onChange={(e) => setFormData({ ...formData, og_image: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="https://example.com/image.jpg"
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Featured / OG Image</label>
+                        {formData.og_image ? (
+                            <div className="relative">
+                                <img src={formData.og_image} alt="OG" className="w-full h-36 object-cover rounded-lg border border-gray-200" />
+                                <button onClick={() => setFormData(f => ({ ...f, og_image: null }))}
+                                    className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                                <button onClick={() => setShowMediaPicker(true)}
+                                    className="w-full py-5 flex flex-col items-center gap-2 hover:bg-blue-50 transition-colors text-gray-500 hover:text-blue-600">
+                                    <Images className="w-7 h-7" />
+                                    <span className="text-sm font-medium">Choose from Media Library</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 

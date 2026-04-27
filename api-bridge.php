@@ -19,11 +19,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
   exit();
 }
 
-// Database configuration
-$db_host = 'localhost';
-$db_name = 'u520390024_ccomsdb';
-$db_user = 'u520390024_ccomsdbuser';
-$db_pass = '2dIta80$WhZXkZp*';
+// ⚠️  DATABASE CONFIGURATION - DO NOT MODIFY FOR PRODUCTION
+// LOCAL DEV: Uses XAMPP MySQL (ccoms_local database)
+// PRODUCTION: Must use Hostinger credentials below
+//
+// When pushing to GitHub/live:
+// 1. Verify this file ALWAYS defaults to PRODUCTION credentials
+// 2. Local changes to this file stay LOCAL (.env.local handles dev overrides)
+// 3. NEVER commit local database credentials to git
+
+if ($_SERVER['HTTP_HOST'] === 'localhost' || strpos($_SERVER['HTTP_HOST'], 'localhost:') === 0) {
+  // LOCAL DEVELOPMENT ONLY (XAMPP MySQL)
+  // These credentials are for localhost:3000 dev testing only
+  $db_host = 'localhost';
+  $db_name = 'ccoms_local';
+  $db_user = 'root';
+  $db_pass = '';  // XAMPP default: no password
+} else {
+  // PRODUCTION HOSTINGER (DEFAULT - what gets pushed live)
+  $db_host = 'localhost';
+  $db_name = 'u520390024_ccomsdb';
+  $db_user = 'u520390024_ccomsdbuser';
+  $db_pass = '2dIta80$WhZXkZp*';
+}
 
 // Create connection
 $conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
@@ -105,7 +123,7 @@ function auth_sign_in($conn, $input) {
     return ['error' => 'Email and password required'];
   }
 
-  $stmt = $conn->prepare("SELECT id, email, password FROM users WHERE email = ?");
+  $stmt = $conn->prepare("SELECT id, email, password, role FROM auth_users WHERE email = ?");
   $stmt->bind_param("s", $email);
   $stmt->execute();
   $result = $stmt->get_result();
@@ -123,10 +141,11 @@ function auth_sign_in($conn, $input) {
 
   $_SESSION['user_id'] = $user['id'];
   $_SESSION['user_email'] = $user['email'];
+  $_SESSION['user_role'] = $user['role'];
 
   return [
-    'user' => ['id' => $user['id'], 'email' => $user['email']],
-    'session' => ['user' => ['id' => $user['id'], 'email' => $user['email']]]
+    'user' => ['id' => $user['id'], 'email' => $user['email'], 'role' => $user['role']],
+    'session' => ['user' => ['id' => $user['id'], 'email' => $user['email'], 'role' => $user['role']]]
   ];
 }
 
@@ -150,20 +169,31 @@ function auth_get_session() {
 function auth_register($conn, $input) {
   $email = $input['email'] ?? '';
   $password = $input['password'] ?? '';
+  $role = $input['role'] ?? 'admin';
 
   if (!$email || !$password) {
     return ['error' => 'Email and password required'];
   }
 
+  // Check if user already exists
+  $check = $conn->prepare("SELECT id FROM auth_users WHERE email = ?");
+  $check->bind_param("s", $email);
+  $check->execute();
+  if ($check->get_result()->num_rows > 0) {
+    return ['error' => 'User already exists'];
+  }
+
   $hashed_password = password_hash($password, PASSWORD_BCRYPT);
 
-  $stmt = $conn->prepare("INSERT INTO users (email, password) VALUES (?, ?)");
-  $stmt->bind_param("ss", $email, $hashed_password);
+  $stmt = $conn->prepare("INSERT INTO auth_users (email, password, role) VALUES (?, ?, ?)");
+  $stmt->bind_param("sss", $email, $hashed_password, $role);
 
   if ($stmt->execute()) {
-    $_SESSION['user_id'] = $conn->insert_id;
+    $user_id = $conn->insert_id;
+    $_SESSION['user_id'] = $user_id;
     $_SESSION['user_email'] = $email;
-    return ['success' => true, 'user' => ['id' => $conn->insert_id, 'email' => $email]];
+    $_SESSION['user_role'] = $role;
+    return ['success' => true, 'user' => ['id' => $user_id, 'email' => $email, 'role' => $role]];
   }
 
   return ['error' => 'Registration failed: ' . $conn->error];

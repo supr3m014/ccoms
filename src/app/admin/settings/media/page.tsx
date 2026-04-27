@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { Save } from 'lucide-react'
+import { useToast } from '@/contexts/ToastContext'
 
 export default function MediaSettingsPage() {
+  const { showToast } = useToast()
   const [thumbnailWidth, setThumbnailWidth] = useState('150')
   const [thumbnailHeight, setThumbnailHeight] = useState('150')
   const [mediumWidth, setMediumWidth] = useState('300')
@@ -13,7 +15,7 @@ export default function MediaSettingsPage() {
   const [organizeByDate, setOrganizeByDate] = useState(true)
 
   const handleSave = () => {
-    alert('Media settings saved successfully!')
+    showToast('Media settings saved successfully!', 'success')
   }
 
   return (

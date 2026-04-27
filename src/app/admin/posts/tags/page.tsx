@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Search } from 'lucide-react'
+import { useToast } from '@/contexts/ToastContext'
+import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface TagType {
   id: string
@@ -12,6 +14,8 @@ interface TagType {
 }
 
 export default function PostTagsPage() {
+  const { showToast } = useToast()
+  const { showConfirm } = useConfirm()
   const [tags, setTags] = useState<TagType[]>([])
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
@@ -61,7 +65,7 @@ export default function PostTagsPage() {
     e.preventDefault()
 
     if (!name.trim()) {
-      alert('Please enter a tag name')
+      showToast('Please enter a tag name', 'warning')
       return
     }
 
@@ -81,14 +85,16 @@ export default function PostTagsPage() {
       setName('')
       setSlug('')
       fetchTags()
+      showToast('Tag added successfully!', 'success')
     } catch (error: any) {
       console.error('Error saving tag:', error)
-      alert(error.message || 'Failed to save tag')
+      showToast(error.message || 'Failed to save tag', 'error')
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this tag?')) return
+    const ok = await showConfirm('Are you sure you want to delete this tag?', { destructive: true })
+    if (!ok) return
 
     try {
       const { error } = await supabase
@@ -101,17 +107,18 @@ export default function PostTagsPage() {
       setSelectedTags(selectedTags.filter(tagId => tagId !== id))
     } catch (error) {
       console.error('Error deleting tag:', error)
-      alert('Failed to delete tag')
+      showToast('Failed to delete tag', 'error')
     }
   }
 
   const handleBulkDelete = async () => {
     if (selectedTags.length === 0) {
-      alert('Please select tags to delete')
+      showToast('Please select tags to delete', 'warning')
       return
     }
 
-    if (!confirm(`Are you sure you want to delete ${selectedTags.length} tag(s)?`)) return
+    const ok = await showConfirm(`Are you sure you want to delete ${selectedTags.length} tag(s)?`, { destructive: true })
+    if (!ok) return
 
     try {
       const { error } = await supabase
@@ -124,7 +131,7 @@ export default function PostTagsPage() {
       setSelectedTags([])
     } catch (error) {
       console.error('Error deleting tags:', error)
-      alert('Failed to delete tags')
+      showToast('Failed to delete tags', 'error')
     }
   }
 
@@ -228,15 +235,9 @@ export default function PostTagsPage() {
                           className="rounded"
                         />
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Slug
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Count
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Trash2, UserPlus, Shield, Mail } from 'lucide-react';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface User {
   id: string;
@@ -12,6 +13,7 @@ interface User {
 }
 
 export default function SettingsPage() {
+  const { showConfirm } = useConfirm();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState('');
@@ -26,15 +28,18 @@ export default function SettingsPage() {
 
   const fetchUsers = async () => {
     try {
-      const { data: { users: authUsers }, error } = await supabase.auth.admin.listUsers();
+      const { data, error } = await supabase
+        .from('auth_users')
+        .select('id, email, role, created_at')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const formattedUsers: User[] = authUsers.map((user: any) => ({
-        id: user.id,
+      const formattedUsers: User[] = (data || []).map((user: any) => ({
+        id: String(user.id),
         email: user.email || '',
         created_at: user.created_at,
-        last_sign_in_at: user.last_sign_in_at || null
+        last_sign_in_at: null,
       }));
 
       setUsers(formattedUsers);
@@ -56,12 +61,14 @@ export default function SettingsPage() {
     }
 
     try {
-      const { error: signupError } = await supabase.auth.signUp({
-        email: newEmail,
-        password: newPassword,
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}?action=sign-up`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: newEmail.toLowerCase(), password: newPassword, role: 'admin' }),
       });
-
-      if (signupError) throw signupError;
+      const result = await response.json();
+      if (!response.ok || result.error) throw new Error(result.error?.message || result.error || 'Failed');
 
       setSuccess(`Admin user ${newEmail} created successfully`);
       setNewEmail('');
@@ -73,13 +80,12 @@ export default function SettingsPage() {
   };
 
   const handleDeleteUser = async (userId: string, email: string) => {
-    if (!confirm(`Are you sure you want to delete ${email}? This action cannot be undone.`)) {
-      return;
-    }
+    const ok = await showConfirm(`Are you sure you want to delete ${email}? This action cannot be undone.`, { destructive: true })
+    if (!ok) return;
 
     setDeleting(userId);
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      const { error } = await supabase.from('auth_users').delete().eq('id', userId);
       if (error) throw error;
 
       setSuccess(`User ${email} deleted successfully`);

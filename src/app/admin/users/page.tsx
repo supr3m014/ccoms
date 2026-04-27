@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Plus, UserCircle, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { useToast } from '@/contexts/ToastContext'
+import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface User {
   id: string
@@ -13,6 +15,8 @@ interface User {
 }
 
 export default function AllUsersPage() {
+  const { showToast } = useToast()
+  const { showConfirm } = useConfirm()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -37,7 +41,8 @@ export default function AllUsersPage() {
   }
 
   const deleteUser = async (id: string, email: string) => {
-    if (!confirm(`Are you sure you want to delete ${email}?`)) return
+    const ok = await showConfirm(`Are you sure you want to delete ${email}?`, { destructive: true })
+    if (!ok) return
 
     try {
       const { error } = await supabase
@@ -49,7 +54,7 @@ export default function AllUsersPage() {
       fetchUsers()
     } catch (error) {
       console.error('Error deleting user:', error)
-      alert('Failed to delete user')
+      showToast('Failed to delete user', 'error')
     }
   }
 

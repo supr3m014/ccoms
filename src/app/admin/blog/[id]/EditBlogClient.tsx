@@ -5,10 +5,12 @@ import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Save, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useToast } from '@/contexts/ToastContext'
 
 export default function EditBlogClient() {
     const params = useParams()
     const router = useRouter()
+    const { showToast } = useToast()
     const postId = params.id as string
     const isNew = postId === 'new'
 
@@ -54,7 +56,7 @@ export default function EditBlogClient() {
             }
         } catch (error) {
             console.error('Error fetching post:', error)
-            alert('Failed to load post')
+            showToast('Failed to load post', 'error')
         } finally {
             setLoading(false)
         }
@@ -69,7 +71,7 @@ export default function EditBlogClient() {
 
     async function handleSave() {
         if (!formData.title || !formData.slug) {
-            alert('Title and slug are required')
+            showToast('Title and slug are required', 'warning')
             return
         }
 
@@ -84,7 +86,7 @@ export default function EditBlogClient() {
             if (isNew) {
                 const { error } = await supabase.from('blog_posts').insert([postData])
                 if (error) throw error
-                alert('Post created successfully!')
+                showToast('Post created successfully!', 'success')
                 router.push('/admin/blog')
             } else {
                 const { error } = await supabase
@@ -92,11 +94,11 @@ export default function EditBlogClient() {
                     .update(postData)
                     .eq('id', postId)
                 if (error) throw error
-                alert('Post updated successfully!')
+                showToast('Post updated successfully!', 'success')
             }
         } catch (error: any) {
             console.error('Error saving post:', error)
-            alert(error.message || 'Failed to save post')
+            showToast(error.message || 'Failed to save post', 'error')
         } finally {
             setSaving(false)
         }

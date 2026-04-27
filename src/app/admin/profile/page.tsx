@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 
 export default function ProfilePage() {
   const { user } = useAuth()
+  const { showToast } = useToast()
   const [email, setEmail] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -18,18 +20,18 @@ export default function ProfilePage() {
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Profile updated successfully!')
+    showToast('Profile updated successfully!', 'success')
   }
 
   const handleUpdatePassword = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (newPassword !== confirmPassword) {
-      alert('Passwords do not match')
+      showToast('Passwords do not match', 'error')
       return
     }
 
-    alert('Password updated successfully!')
+    showToast('Password updated successfully!', 'success')
     setCurrentPassword('')
     setNewPassword('')
     setConfirmPassword('')

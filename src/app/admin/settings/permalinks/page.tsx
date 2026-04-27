@@ -2,15 +2,17 @@
 
 import { useState } from 'react'
 import { Save } from 'lucide-react'
+import { useToast } from '@/contexts/ToastContext'
 
 export default function PermalinksSettingsPage() {
+  const { showToast } = useToast()
   const [structure, setStructure] = useState('post-name')
   const [customStructure, setCustomStructure] = useState('')
   const [categoryBase, setCategoryBase] = useState('category')
   const [tagBase, setTagBase] = useState('tag')
 
   const handleSave = () => {
-    alert('Permalink settings saved successfully!')
+    showToast('Permalink settings saved successfully!', 'success')
   }
 
   return (

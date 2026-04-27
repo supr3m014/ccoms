@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { ToastProvider } from '@/contexts/ToastContext'
+import { ConfirmProvider } from '@/contexts/ConfirmContext'
 import Link from 'next/link'
 import {
   LayoutDashboard, FileText, Image, FolderOpen, Users, BarChart3,
@@ -75,6 +76,7 @@ const navigation: NavItem[] = [
     subsections: [
       { name: 'Ticket Desk', href: '/admin/support' },
       { name: 'Live Chat Hub', href: '/admin/support/chat' },
+      { name: 'Chat History', href: '/admin/support/chat-history' },
       { name: 'Email Inbox', href: '/admin/support/email' },
       { name: 'Response Macros', href: '/admin/support/macros' },
     ]
@@ -183,8 +185,13 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     return pathname === href || pathname?.startsWith(href + '/')
   }
 
-  const isSectionMainActive = (item: NavItem) => {
-    return isActive(item.href)
+  // For subsection links: exact match wins; only fall back to startsWith
+  // if NO sibling subsection has a closer exact match.
+  const isSubActive = (href: string, siblings: SubSection[]) => {
+    if (pathname === href) return true
+    if (!pathname?.startsWith(href + '/')) return false
+    // startsWith matched — but only use it if no sibling matches exactly
+    return !siblings.some(s => pathname === s.href)
   }
 
   const isSectionActive = (item: NavItem) => {
@@ -314,11 +321,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
               return (
                 <div key={item.name}>
-                  <div className={`flex items-center rounded-lg transition-colors ${isSectionMainActive(item) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                  <div className={`flex items-center rounded-lg transition-colors ${isSectionActive(item) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                     {/* Section name — navigates to href */}
                     <Link
                       href={item.href}
-                      className={`flex items-center gap-3 flex-1 px-3 py-2 min-w-0 ${isSectionMainActive(item) ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
+                      className={`flex items-center gap-3 flex-1 px-3 py-2 min-w-0 ${isSectionActive(item) ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
                       title={sidebarCollapsed ? item.name : ''}
                     >
                       <Icon className="w-4 h-4 shrink-0" />
@@ -349,7 +356,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                           key={sub.href}
                           href={sub.href}
                           className={`block px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                            isActive(sub.href)
+                            isSubActive(sub.href, item.subsections!)
                               ? 'text-blue-600 bg-blue-50 font-medium'
                               : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
                           }`}
@@ -390,7 +397,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <AuthProvider>
       <ToastProvider>
-        <AdminLayoutContent>{children}</AdminLayoutContent>
+        <ConfirmProvider>
+          <AdminLayoutContent>{children}</AdminLayoutContent>
+        </ConfirmProvider>
       </ToastProvider>
     </AuthProvider>
   )

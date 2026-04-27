@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Trash2, Check, X } from 'lucide-react'
+import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface Comment {
   id: string
@@ -16,6 +17,7 @@ interface Comment {
 }
 
 export default function CommentsPage() {
+  const { showConfirm } = useConfirm()
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'approved' | 'pending' | 'spam'>('all')
@@ -61,7 +63,8 @@ export default function CommentsPage() {
   }
 
   const deleteComment = async (id: string) => {
-    if (!confirm('Delete this comment?')) return
+    const ok = await showConfirm('Delete this comment? This cannot be undone.', { destructive: true })
+    if (!ok) return
 
     try {
       const { error } = await supabase
