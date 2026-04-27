@@ -9,7 +9,7 @@ import Link from 'next/link'
 import {
   LayoutDashboard, FileText, Image, FolderOpen, Users, BarChart3,
   ChevronDown, ChevronRight, User, LogOut, Search, Headphones,
-  Wrench, Menu, ChevronLeft, ExternalLink
+  Wrench, Menu, ChevronLeft, ExternalLink, UserCircle, CreditCard
 } from 'lucide-react'
 
 interface SubSection {
@@ -26,6 +26,18 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  {
+    name: 'Clients',
+    href: '/admin/clients',
+    icon: UserCircle,
+    subsections: [
+      { name: 'All Clients', href: '/admin/clients' },
+      { name: 'Payments', href: '/admin/clients/payments' },
+      { name: 'Orders & Tasks', href: '/admin/clients/orders' },
+      { name: 'Client Messages', href: '/admin/clients/messages' },
+      { name: 'Reports & Files', href: '/admin/clients/reports' },
+    ]
+  },
   {
     name: 'Media',
     href: '/admin/media',
