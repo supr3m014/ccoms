@@ -39,18 +39,29 @@ export default function SettingsPage() {
     if (!newCred.label.trim()) { showToast('Label is required', 'warning'); return }
     setSavingCred(true)
     try {
+      // Encrypt password via server-side API route
+      let encryptedPass: string | null = null
+      if (newCred.password.trim()) {
+        const res = await fetch('/api/vault', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'encrypt', value: newCred.password.trim() }),
+        })
+        const data = await res.json()
+        encryptedPass = data.result
+      }
       await supabase.from('client_credentials').insert([{
         client_id: client!.id,
         label: newCred.label.trim(),
         username: newCred.username.trim() || null,
-        password_encrypted: newCred.password.trim() || null,
+        password_encrypted: encryptedPass,
         url: newCred.url.trim() || null,
         notes: newCred.notes.trim() || null,
       }])
       setNewCred({ label: '', username: '', password: '', url: '', notes: '' })
       setShowNewCred(false)
       fetchCredentials()
-      showToast('Credential saved', 'success')
+      showToast('Credential saved and encrypted', 'success')
     } catch { showToast('Failed to save', 'error') }
     setSavingCred(false)
   }
@@ -63,9 +74,25 @@ export default function SettingsPage() {
     showToast('Credential removed', 'success')
   }
 
-  const toggleShow = (id: string) => {
+  const [decryptedPasswords, setDecryptedPasswords] = useState<Record<string, string>>({})
+
+  const toggleShow = async (id: string, encryptedPass: string | null) => {
     const s = new Set(showPasswords)
-    s.has(id) ? s.delete(id) : s.add(id)
+    if (s.has(id)) {
+      s.delete(id)
+    } else {
+      s.add(id)
+      // Decrypt on first reveal
+      if (encryptedPass && !decryptedPasswords[id]) {
+        const res = await fetch('/api/vault', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'decrypt', value: encryptedPass }),
+        })
+        const data = await res.json()
+        setDecryptedPasswords(prev => ({ ...prev, [id]: data.result }))
+      }
+    }
     setShowPasswords(s)
   }
 
@@ -147,8 +174,8 @@ export default function SettingsPage() {
                   {cred.username && <p className="text-xs text-gray-600 mt-1">User: {cred.username}</p>}
                   {cred.password_encrypted && (
                     <div className="flex items-center gap-2 mt-1">
-                      <p className="text-xs text-gray-600">Pass: {showPasswords.has(cred.id) ? cred.password_encrypted : '••••••••'}</p>
-                      <button onClick={() => toggleShow(cred.id)} className="text-gray-400 hover:text-gray-600">
+                      <p className="text-xs text-gray-600">Pass: {showPasswords.has(cred.id) ? (decryptedPasswords[cred.id] || '•••decrypting•••') : '••••••••'}</p>
+                      <button onClick={() => toggleShow(cred.id, cred.password_encrypted)} className="text-gray-400 hover:text-gray-600">
                         {showPasswords.has(cred.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
                     </div>
