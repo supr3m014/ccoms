@@ -42,10 +42,9 @@ export default function SettingsPage() {
       // Encrypt password via server-side API route
       let encryptedPass: string | null = null
       if (newCred.password.trim()) {
-        const res = await fetch('/api/vault', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'encrypt', value: newCred.password.trim() }),
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}?action=vault-encrypt`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', body: JSON.stringify({ value: newCred.password.trim() }),
         })
         const data = await res.json()
         encryptedPass = data.result
@@ -84,10 +83,9 @@ export default function SettingsPage() {
       s.add(id)
       // Decrypt on first reveal
       if (encryptedPass && !decryptedPasswords[id]) {
-        const res = await fetch('/api/vault', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'decrypt', value: encryptedPass }),
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}?action=vault-decrypt`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', body: JSON.stringify({ value: encryptedPass }),
         })
         const data = await res.json()
         setDecryptedPasswords(prev => ({ ...prev, [id]: data.result }))

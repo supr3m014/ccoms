@@ -115,11 +115,17 @@ export default function TicketDeskPage() {
     finally { setLoadingMessages(false) }
   }
 
+  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
   const apiCall = async (action: string, extra: any = {}) => {
-    const res = await fetch('/api/tickets', {
+    const phpAction = action === 'reply' ? 'ticket-reply'
+      : action === 'update-status' ? 'ticket-status'
+      : action === 'assign' ? 'ticket-assign'
+      : 'ticket-create'
+    const res = await fetch(`${BRIDGE}?action=${phpAction}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, ...extra }),
+      credentials: 'include',
+      body: JSON.stringify(extra),
     })
     return res.json()
   }

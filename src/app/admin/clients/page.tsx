@@ -28,6 +28,15 @@ const STATUS_COLORS: Record<string, string> = {
   suspended: 'bg-red-100 text-red-700',
 }
 
+const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
+const bridgePost = async (action: string, body: any) => {
+  const res = await fetch(`${BRIDGE}?action=${action}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', body: JSON.stringify(body),
+  })
+  return res.json()
+}
+
 export default function ClientsPage() {
   const { showToast } = useToast()
   const { showConfirm } = useConfirm()
@@ -68,12 +77,7 @@ export default function ClientsPage() {
     try {
       const tempPass = Math.random().toString(36).slice(-6).toUpperCase() +
         Math.random().toString(36).slice(-6) + '!'
-      const res = await fetch('/api/clients/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: client.id, temp_password: tempPass }),
-      })
-      const data = await res.json()
+      const data = await bridgePost('client-approve', { client_id: client.id, temp_password: tempPass })
       if (data.error) throw new Error(data.error)
 
       await supabase.from('payments')
@@ -97,12 +101,7 @@ export default function ClientsPage() {
     setEmailingId(client.id)
     try {
       // Generate a reset/re-send email (sends current portal link + support instructions)
-      const res = await fetch('/api/clients/email-credentials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client_id: client.id }),
-      })
-      const data = await res.json()
+      const data = await bridgePost('client-email-creds', { client_id: client.id })
       if (data.error) throw new Error(data.error)
       showToast(`Access email sent to ${client.email}`, 'success')
     } catch (err: any) {
