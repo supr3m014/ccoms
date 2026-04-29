@@ -67,17 +67,33 @@ export default function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Use PHP bridge directly (works on both local XAMPP and Hostinger production)
+  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
+  const bridgePost = async (action: string, body: any) => {
+    const res = await fetch(`${BRIDGE}?action=${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    })
+    return res.json()
+  }
+  const bridgeGet = async (action: string, params: Record<string, string> = {}) => {
+    const url = new URL(BRIDGE)
+    url.searchParams.set('action', action)
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+    const res = await fetch(url.toString(), { credentials: 'include' })
+    return res.json()
+  }
+
   // Poll for new messages when chat is active
   useEffect(() => {
     if (!sessionId || step !== 'chat') return
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/chat?session_id=${sessionId}&since=${lastPoll}`)
-        const data = await res.json()
-        if (data.messages?.length > 0) {
-          setMessages(prev => [...prev, ...data.messages])
-          setLastPoll(new Date().toISOString())
-        }
+        const data = await bridgeGet('chat-poll', { session_id: sessionId })
+        const incoming: Message[] = data.messages || []
+        setMessages(prev => incoming.length > prev.length ? incoming : prev)
         if (data.session?.mode === 'ended') {
           setStep('ended')
           if (!ticketOffered) setTicketOffered(true)
@@ -86,18 +102,17 @@ export default function ChatWidget() {
       } catch {}
     }, 2500)
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
-  }, [sessionId, step, lastPoll])
+  }, [sessionId, step])
 
   const startChat = async () => {
     if (!form.name.trim() || !form.email.trim()) return
     setSending(true)
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start', ...form }),
+      const data = await bridgePost('chat-start', {
+        visitor_name: form.name, visitor_email: form.email,
+        visitor_phone: form.phone, visitor_address: form.address,
+        visitor_country: form.country, category: form.category,
       })
-      const data = await res.json()
       if (data.session_id) {
         setSessionId(data.session_id)
         setMessages([{ sender_type: 'ai', content: data.welcome }])
@@ -115,12 +130,7 @@ export default function ChatWidget() {
     setMessages(prev => [...prev, { sender_type: 'visitor', content: text }])
     setSending(true)
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send', session_id: sessionId, content: text }),
-      })
-      const data = await res.json()
+      const data = await bridgePost('chat-send', { session_id: sessionId, content: text })
       if (data.message) {
         setMessages(prev => [...prev, { sender_type: data.mode === 'human' ? 'admin' : 'ai', content: data.message }])
       }
@@ -131,11 +141,7 @@ export default function ChatWidget() {
 
   const endChat = async () => {
     if (!sessionId) return
-    await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'end', session_id: sessionId }),
-    })
+    await bridgePost('chat-end', { session_id: sessionId })
     setStep('ended')
     setTicketOffered(true)
     if (pollRef.current) clearInterval(pollRef.current)
@@ -143,11 +149,7 @@ export default function ChatWidget() {
 
   const createTicket = async () => {
     if (!sessionId) return
-    await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create-ticket', session_id: sessionId }),
-    })
+    await bridgePost('chat-create-ticket', { session_id: sessionId })
     setTicketCreated(true)
   }
 

@@ -70,10 +70,25 @@ export default function LiveChatHubPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
+  const bridgePost = async (action: string, body: any) => {
+    const res = await fetch(`${BRIDGE}?action=${action}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', body: JSON.stringify(body),
+    })
+    return res.json()
+  }
+  const bridgeGet = async (action: string, params: Record<string, string> = {}) => {
+    const url = new URL(BRIDGE)
+    url.searchParams.set('action', action)
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+    const res = await fetch(url.toString(), { credentials: 'include' })
+    return res.json()
+  }
+
   const fetchSessions = async () => {
     try {
-      const res = await fetch('/api/chat?type=admin-sessions')
-      const data = await res.json()
+      const data = await bridgeGet('chat-poll', { type: 'admin-sessions' })
       setSessions(data.sessions || [])
     } catch {}
     setLoading(false)
@@ -81,8 +96,7 @@ export default function LiveChatHubPage() {
 
   const fetchMessages = async (sessionId: string) => {
     try {
-      const res = await fetch(`/api/chat?session_id=${sessionId}`)
-      const data = await res.json()
+      const data = await bridgeGet('chat-poll', { session_id: sessionId })
       const incoming: Message[] = data.messages || []
       setMessages(prev => {
         if (incoming.length === prev.length) return prev
@@ -103,11 +117,7 @@ export default function LiveChatHubPage() {
 
   const takeover = async (sessionId: string) => {
     try {
-      await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'takeover', session_id: sessionId }),
-      })
+      await bridgePost('chat-takeover', { session_id: sessionId })
       showToast("You've taken over the chat", 'success')
       await fetchMessages(sessionId)
       fetchSessions()
@@ -142,11 +152,7 @@ export default function LiveChatHubPage() {
     setInput('')
     setSending(true)
     try {
-      await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'admin-reply', session_id: selectedSession, content: text }),
-      })
+      await bridgePost('chat-admin-reply', { session_id: selectedSession, content: text })
       fetchMessages(selectedSession)
     } catch { showToast('Failed to send', 'error') }
     setSending(false)

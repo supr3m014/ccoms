@@ -112,9 +112,285 @@ function route_auth() {
       return client_approve($conn, $input);
     case 'client-next-id':
       return client_next_id($conn);
+    // Live chat actions (handles Claude AI call server-side — works on Hostinger)
+    case 'chat-start':
+      return chat_start($conn, $input);
+    case 'chat-send':
+      return chat_send($conn, $input);
+    case 'chat-takeover':
+      return chat_takeover($conn, $input);
+    case 'chat-admin-reply':
+      return chat_admin_reply($conn, $input);
+    case 'chat-end':
+      return chat_end($conn, $input);
+    case 'chat-create-ticket':
+      return chat_create_ticket($conn, $input);
+    case 'chat-poll':
+      return chat_poll($conn);
+    // Ticket actions
+    case 'ticket-create':
+      return ticket_create($conn, $input);
+    case 'ticket-reply':
+      return ticket_reply($conn, $input);
+    case 'ticket-status':
+      return ticket_update_status($conn, $input);
+    case 'ticket-assign':
+      return ticket_assign($conn, $input);
     default:
       return ['error' => 'Unknown auth action'];
   }
+}
+
+// ── LIVE CHAT FUNCTIONS (PHP-native, works on Hostinger) ─────────────────────
+
+function uuid4() {
+  return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+    mt_rand(0,0xffff),mt_rand(0,0xffff),mt_rand(0,0xffff),
+    mt_rand(0,0x0fff)|0x4000,mt_rand(0,0x3fff)|0x8000,
+    mt_rand(0,0xffff),mt_rand(0,0xffff),mt_rand(0,0xffff));
+}
+
+function mysql_now() {
+  return date('Y-m-d H:i:s');
+}
+
+function call_claude($conn, $session_id, $category, $user_message) {
+  $api_key = defined('ANTHROPIC_API_KEY') ? ANTHROPIC_API_KEY : (getenv('ANTHROPIC_API_KEY') ?: '');
+
+  // Get conversation history (last 10)
+  $stmt = $conn->prepare("SELECT sender_type, content FROM chat_messages WHERE session_id=? ORDER BY created_at DESC LIMIT 10");
+  $stmt->bind_param("s", $session_id);
+  $stmt->execute();
+  $rows = array_reverse($stmt->get_result()->fetch_all(MYSQLI_ASSOC));
+
+  $personas = [
+    'billing' => 'You are a billing support specialist for Core Conversion digital marketing agency. Help with invoice questions, payments, refunds. Be empathetic and solution-focused. Keep responses under 4 sentences.',
+    'sales' => 'You are a sales representative for Core Conversion, a digital marketing agency. Help prospects understand SEO, web dev, brand design, and AI video services. Be helpful but not pushy. Keep responses under 4 sentences.',
+    'technical' => 'You are a technical support specialist for Core Conversion. Help with website issues, tracking, analytics, CMS questions. Be precise and step-by-step. Keep responses under 4 sentences.',
+    'general' => 'You are a helpful support assistant for Core Conversion, a digital marketing agency in the Philippines. Help with general inquiries. Be friendly and concise. Keep responses under 3 sentences.',
+  ];
+  $system = $personas[$category] ?? $personas['general'];
+
+  $messages = [];
+  foreach ($rows as $r) {
+    if ($r['sender_type'] === 'visitor') $messages[] = ['role'=>'user','content'=>$r['content']];
+    elseif (in_array($r['sender_type'],['ai','admin'])) $messages[] = ['role'=>'assistant','content'=>$r['content']];
+  }
+  if (empty($messages)) $messages[] = ['role'=>'user','content'=>$user_message];
+
+  if (!$api_key || $api_key === 'your-key-here') {
+    return 'Our AI assistant is temporarily unavailable. A human agent will assist you shortly.';
+  }
+
+  $payload = json_encode([
+    'model' => 'claude-haiku-4-5-20251001',
+    'max_tokens' => 300,
+    'system' => $system,
+    'messages' => $messages,
+  ]);
+
+  $ch = curl_init('https://api.anthropic.com/v1/messages');
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => [
+      'Content-Type: application/json',
+      'x-api-key: ' . $api_key,
+      'anthropic-version: 2023-06-01',
+    ],
+    CURLOPT_TIMEOUT => 20,
+  ]);
+  $resp = curl_exec($ch);
+  curl_close($ch);
+
+  if (!$resp) return 'I\'m having trouble responding right now. A human agent will assist you shortly.';
+  $data = json_decode($resp, true);
+  return $data['content'][0]['text'] ?? 'Unable to process response.';
+}
+
+function chat_start($conn, $input) {
+  $sid = uuid4();
+  $name = $input['visitor_name'] ?? 'Visitor';
+  $email = $input['visitor_email'] ?? '';
+  $phone = $input['visitor_phone'] ?? '';
+  $address = $input['visitor_address'] ?? '';
+  $country = $input['visitor_country'] ?? '';
+  $cat = $input['category'] ?? 'general';
+
+  $stmt = $conn->prepare("INSERT INTO chat_sessions (id, visitor_name, visitor_email, visitor_phone, visitor_address, visitor_country, category, mode) VALUES (?,?,?,?,?,?,?,'ai')");
+  $stmt->bind_param("sssssss", $sid, $name, $email, $phone, $address, $country, $cat);
+  if (!$stmt->execute()) return ['error' => 'Failed to create session: ' . $conn->error];
+
+  $welcome = "Hi $name! 👋 Welcome to Core Conversion support. I'm your AI assistant here to help with your $cat inquiry. How can I help you today?";
+  $mid = uuid4();
+  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'ai',?,?)");
+  $stmt2->bind_param("sss", $mid, $sid, $welcome);
+  $stmt2->execute();
+
+  return ['session_id' => $sid, 'welcome' => $welcome];
+}
+
+function chat_send($conn, $input) {
+  $sid = $input['session_id'] ?? '';
+  $content = $input['content'] ?? '';
+  if (!$sid || !$content) return ['error' => 'session_id and content required'];
+
+  // Save visitor message
+  $mid = uuid4();
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'visitor',?,?)");
+  $stmt->bind_param("sss", $mid, $sid, $content);
+  $stmt->execute();
+
+  // Check mode
+  $res = $conn->query("SELECT mode, category FROM chat_sessions WHERE id='$sid'");
+  if (!$res || $res->num_rows === 0) return ['error' => 'Session not found'];
+  $session = $res->fetch_assoc();
+
+  if ($session['mode'] !== 'ai') return ['message' => null, 'mode' => $session['mode']];
+
+  // Call Claude
+  $ai_response = call_claude($conn, $sid, $session['category'], $content);
+
+  $amid = uuid4();
+  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'ai',?,?)");
+  $stmt2->bind_param("sss", $amid, $sid, $ai_response);
+  $stmt2->execute();
+
+  return ['message' => $ai_response, 'mode' => 'ai'];
+}
+
+function chat_takeover($conn, $input) {
+  $sid = $input['session_id'] ?? '';
+  $conn->query("UPDATE chat_sessions SET mode='human' WHERE id='$sid'");
+  $mid = uuid4();
+  $msg = '🔄 An agent has joined the chat and will assist you now.';
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'system',?,?)");
+  $stmt->bind_param("sss", $mid, $sid, $msg);
+  $stmt->execute();
+  return ['success' => true];
+}
+
+function chat_admin_reply($conn, $input) {
+  $sid = $input['session_id'] ?? '';
+  $content = $input['content'] ?? '';
+  $mid = uuid4();
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'admin',?,?)");
+  $stmt->bind_param("sss", $mid, $sid, $content);
+  $stmt->execute();
+  return ['success' => true];
+}
+
+function chat_end($conn, $input) {
+  $sid = $input['session_id'] ?? '';
+  $now = mysql_now();
+  $conn->query("UPDATE chat_sessions SET mode='ended', ended_at='$now' WHERE id='$sid'");
+  $mid = uuid4();
+  $msg = 'Chat session ended. Thank you for contacting Core Conversion!';
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'system',?,?)");
+  $stmt->bind_param("sss", $mid, $sid, $msg);
+  $stmt->execute();
+  return ['success' => true];
+}
+
+function chat_poll($conn) {
+  $sid = $_GET['session_id'] ?? '';
+  $type = $_GET['type'] ?? '';
+
+  if ($type === 'admin-sessions') {
+    $result = $conn->query("SELECT * FROM chat_sessions WHERE mode IN ('ai','human') ORDER BY started_at DESC");
+    $sessions = [];
+    if ($result) while ($row = $result->fetch_assoc()) $sessions[] = $row;
+    return ['sessions' => $sessions];
+  }
+
+  if (!$sid) return ['error' => 'session_id required'];
+  $msgs = [];
+  $res = $conn->query("SELECT * FROM chat_messages WHERE session_id='$sid' ORDER BY created_at ASC");
+  if ($res) while ($row = $res->fetch_assoc()) $msgs[] = $row;
+
+  $session = null;
+  $sres = $conn->query("SELECT * FROM chat_sessions WHERE id='$sid'");
+  if ($sres && $sres->num_rows > 0) $session = $sres->fetch_assoc();
+
+  return ['messages' => $msgs, 'session' => $session];
+}
+
+function chat_create_ticket($conn, $input) {
+  $sid = $input['session_id'] ?? '';
+  $sres = $conn->query("SELECT * FROM chat_sessions WHERE id='$sid'");
+  if (!$sres || $sres->num_rows === 0) return ['error' => 'Session not found'];
+  $session = $sres->fetch_assoc();
+
+  $tid = uuid4();
+  $subject = 'Chat inquiry — ' . $session['category'];
+  $stmt = $conn->prepare("INSERT INTO support_tickets (id, subject, visitor_name, visitor_email, visitor_phone, category, status, priority, source, chat_session_id) VALUES (?,?,?,?,?,?,'open','medium','chat',?)");
+  $stmt->bind_param("sssssss", $tid, $subject, $session['visitor_name'], $session['visitor_email'], $session['visitor_phone'], $session['category'], $sid);
+  $stmt->execute();
+
+  // Copy messages
+  $mres = $conn->query("SELECT * FROM chat_messages WHERE session_id='$sid' AND sender_type != 'system'");
+  if ($mres) while ($m = $mres->fetch_assoc()) {
+    $tmid = uuid4();
+    $stype = ($m['sender_type'] === 'visitor') ? 'customer' : 'admin';
+    $sname = ($m['sender_type'] === 'visitor') ? $session['visitor_name'] : ($m['sender_type'] === 'ai' ? 'AI Assistant' : 'Agent');
+    $stmt2 = $conn->prepare("INSERT INTO ticket_messages (id, ticket_id, sender_type, sender_name, content) VALUES (?,?,?,?,?)");
+    $stmt2->bind_param("sssss", $tmid, $tid, $stype, $sname, $m['content']);
+    $stmt2->execute();
+  }
+
+  $conn->query("UPDATE chat_sessions SET ticket_created=1 WHERE id='$sid'");
+  return ['success' => true, 'ticket_id' => $tid];
+}
+
+// ── TICKET FUNCTIONS (PHP-native) ─────────────────────────────────────────────
+
+function ticket_create($conn, $input) {
+  $tid = uuid4();
+  $stmt = $conn->prepare("INSERT INTO support_tickets (id, subject, visitor_name, visitor_email, visitor_phone, category, priority, status, source) VALUES (?,?,?,?,?,?,?,'open',?)");
+  $cat = $input['category'] ?? 'general';
+  $pri = $input['priority'] ?? 'medium';
+  $src = $input['source'] ?? 'manual';
+  $stmt->bind_param("ssssssss", $tid, $input['subject'], $input['visitor_name'], $input['visitor_email'], $input['visitor_phone'], $cat, $pri, $src);
+  $stmt->execute();
+
+  // First message
+  if (!empty($input['content'])) {
+    $mid = uuid4();
+    $name = $input['visitor_name'];
+    $stmt2 = $conn->prepare("INSERT INTO ticket_messages (id, ticket_id, sender_type, sender_name, content) VALUES (?,'customer',?,?)");
+    $stmt2->bind_param("ssss", $mid, $tid, $name, $input['content']);
+    $stmt2->execute();
+  }
+  return ['success' => true, 'ticket_id' => $tid];
+}
+
+function ticket_reply($conn, $input) {
+  $tid = $input['ticket_id'] ?? '';
+  $content = $input['content'] ?? '';
+  $internal = isset($input['is_internal']) && $input['is_internal'] ? 1 : 0;
+  $mid = uuid4();
+  $sname = 'Support Team';
+  $stmt = $conn->prepare("INSERT INTO ticket_messages (id, ticket_id, sender_type, sender_name, content, is_internal) VALUES (?,'admin',?,?,?)");
+  $stmt->bind_param("ssssi", $mid, $tid, $sname, $content, $internal);
+  $stmt->execute();
+  $now = mysql_now();
+  $conn->query("UPDATE support_tickets SET updated_at='$now' WHERE id='$tid'");
+  return ['success' => true];
+}
+
+function ticket_update_status($conn, $input) {
+  $tid = $input['ticket_id'] ?? '';
+  $status = $input['status'] ?? 'open';
+  $conn->query("UPDATE support_tickets SET status='$status' WHERE id='$tid'");
+  return ['success' => true];
+}
+
+function ticket_assign($conn, $input) {
+  $tid = $input['ticket_id'] ?? '';
+  $assignee = $conn->real_escape_string($input['assigned_to'] ?? '');
+  $conn->query("UPDATE support_tickets SET assigned_to='$assignee' WHERE id='$tid'");
+  return ['success' => true];
 }
 
 function route_table() {
