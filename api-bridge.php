@@ -232,9 +232,36 @@ function chat_start($conn, $input) {
 
   $welcome = "Hi $name! 👋 Welcome to Core Conversion support. I'm your AI assistant here to help with your $cat inquiry. How can I help you today?";
   $mid = uuid4();
-  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'ai',?,?)");
+  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'ai', ?)");
   $stmt2->bind_param("sss", $mid, $sid, $welcome);
   $stmt2->execute();
+
+  // Send confirmation email to visitor
+  if ($email) {
+    $visitor_subject = "Core Conversion — We received your inquiry";
+    $visitor_body = "Hi $name,\r\n\r\n"
+      . "Thank you for reaching out to Core Conversion! We've received your $cat inquiry.\r\n\r\n"
+      . "Our AI assistant is currently helping you in the live chat. If a human agent isn't available right away, "
+      . "don't worry — our team will review your conversation and follow up via this email within 24 hours.\r\n\r\n"
+      . "If you'd like to continue the conversation later, simply visit our website and start a new chat.\r\n\r\n"
+      . "Best regards,\r\nCore Conversion Support Team\r\n"
+      . "https://ccoms.ph";
+    $visitor_headers = "From: support@ccoms.ph\r\nReply-To: support@ccoms.ph";
+    @mail($email, $visitor_subject, $visitor_body, $visitor_headers);
+  }
+
+  // Notify admin of new chat session
+  $admin_email = 'paul@ccoms.ph';
+  $admin_subject = "[CCOMS] New Live Chat — $name ($cat)";
+  $admin_body = "New live chat session started:\r\n\r\n"
+    . "Name: $name\r\n"
+    . "Email: $email\r\n"
+    . "Phone: $phone\r\n"
+    . "Category: $cat\r\n"
+    . "Country: $country\r\n\r\n"
+    . "View in admin: https://ccoms.ph/admin/support/chat\r\n";
+  $admin_headers = "From: support@ccoms.ph\r\nReply-To: $email";
+  @mail($admin_email, $admin_subject, $admin_body, $admin_headers);
 
   return ['session_id' => $sid, 'welcome' => $welcome];
 }
@@ -246,7 +273,7 @@ function chat_send($conn, $input) {
 
   // Save visitor message
   $mid = uuid4();
-  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'visitor',?,?)");
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'visitor', ?)");
   $stmt->bind_param("sss", $mid, $sid, $content);
   $stmt->execute();
 
@@ -261,7 +288,7 @@ function chat_send($conn, $input) {
   $ai_response = call_claude($conn, $sid, $session['category'], $content);
 
   $amid = uuid4();
-  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'ai',?,?)");
+  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'ai', ?)");
   $stmt2->bind_param("sss", $amid, $sid, $ai_response);
   $stmt2->execute();
 
@@ -273,7 +300,7 @@ function chat_takeover($conn, $input) {
   $conn->query("UPDATE chat_sessions SET mode='human' WHERE id='$sid'");
   $mid = uuid4();
   $msg = '🔄 An agent has joined the chat and will assist you now.';
-  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'system',?,?)");
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'system', ?)");
   $stmt->bind_param("sss", $mid, $sid, $msg);
   $stmt->execute();
   return ['success' => true];
@@ -283,7 +310,7 @@ function chat_admin_reply($conn, $input) {
   $sid = $input['session_id'] ?? '';
   $content = $input['content'] ?? '';
   $mid = uuid4();
-  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'admin',?,?)");
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'admin', ?)");
   $stmt->bind_param("sss", $mid, $sid, $content);
   $stmt->execute();
   return ['success' => true];
@@ -295,7 +322,7 @@ function chat_end($conn, $input) {
   $conn->query("UPDATE chat_sessions SET mode='ended', ended_at='$now' WHERE id='$sid'");
   $mid = uuid4();
   $msg = 'Chat session ended. Thank you for contacting Core Conversion!';
-  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'system',?,?)");
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'system', ?)");
   $stmt->bind_param("sss", $mid, $sid, $msg);
   $stmt->execute();
   return ['success' => true];

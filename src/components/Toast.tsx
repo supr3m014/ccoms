@@ -34,8 +34,8 @@ export default function Toast({ message, type = 'success', duration = 3000, onCl
   }
 
   return (
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] animate-fadeIn">
-      <div className={`${colors[type]} text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3 min-w-[300px] max-w-md`}>
+    <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] animate-fadeIn pointer-events-none">
+      <div className={`${colors[type]} text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3 min-w-[300px] max-w-md pointer-events-auto`}>
         {icons[type]}
         <span className="flex-1 font-medium">{message}</span>
         <button

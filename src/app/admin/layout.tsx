@@ -136,6 +136,26 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [expandedSections, setExpandedSections] = useState<string[]>([])
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
   const [showSiteDropdown, setShowSiteDropdown] = useState(false)
+  const [activeChatCount, setActiveChatCount] = useState(0)
+
+  // Poll for active chat sessions (notification badge)
+  useEffect(() => {
+    const BRIDGE = process.env.NEXT_PUBLIC_API_URL
+    if (!BRIDGE || !user) return
+
+    const pollChats = async () => {
+      try {
+        const url = `${BRIDGE}?action=chat-poll&type=admin-sessions`
+        const res = await fetch(url, { credentials: 'include' })
+        const data = await res.json()
+        setActiveChatCount(data.sessions?.length || 0)
+      } catch {}
+    }
+
+    pollChats()
+    const interval = setInterval(pollChats, 15000)
+    return () => clearInterval(interval)
+  }, [user])
 
   // Auth guard
   useEffect(() => {
@@ -343,6 +363,12 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                       <Icon className="w-4 h-4 shrink-0" />
                       {!sidebarCollapsed && (
                         <span className="text-sm font-medium truncate">{item.name}</span>
+                      )}
+                      {/* Live chat notification badge */}
+                      {item.name === 'Support / Ticket' && activeChatCount > 0 && (
+                        <span className="ml-auto shrink-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                          {activeChatCount}
+                        </span>
                       )}
                     </Link>
 
