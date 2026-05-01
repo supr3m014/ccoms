@@ -127,6 +127,12 @@ function route_auth() {
       return chat_create_ticket($conn, $input);
     case 'chat-poll':
       return chat_poll($conn);
+    case 'chat-typing':
+      return chat_typing($conn, $input);
+    case 'chat-history-list':
+      return chat_history_list($conn);
+    case 'chat-history-messages':
+      return chat_history_messages($conn, $input);
     // Ticket actions
     case 'ticket-create':
       return ticket_create($conn, $input);
@@ -136,6 +142,12 @@ function route_auth() {
       return ticket_update_status($conn, $input);
     case 'ticket-assign':
       return ticket_assign($conn, $input);
+    case 'ticket-list':
+      return ticket_list($conn);
+    case 'ticket-messages':
+      return ticket_messages($conn, $input);
+    case 'ticket-delete':
+      return ticket_delete($conn, $input);
     // Vault encryption
     case 'vault-encrypt':
       return vault_encrypt($input);
@@ -378,6 +390,33 @@ function chat_create_ticket($conn, $input) {
   return ['success' => true, 'ticket_id' => $tid];
 }
 
+function chat_typing($conn, $input) {
+  $sid = $conn->real_escape_string($input['session_id'] ?? '');
+  $type = $input['type'] ?? 'visitor'; // 'visitor' or 'admin'
+  $now = mysql_now();
+  if ($type === 'admin') {
+    $conn->query("UPDATE chat_sessions SET admin_typing_at='$now' WHERE id='$sid'");
+  } else {
+    $conn->query("UPDATE chat_sessions SET visitor_typing_at='$now' WHERE id='$sid'");
+  }
+  return ['success' => true];
+}
+
+function chat_history_list($conn) {
+  $res = $conn->query("SELECT * FROM chat_sessions ORDER BY started_at DESC");
+  $sessions = [];
+  if ($res) while ($row = $res->fetch_assoc()) $sessions[] = $row;
+  return ['sessions' => $sessions];
+}
+
+function chat_history_messages($conn, $input) {
+  $sid = $conn->real_escape_string($input['session_id'] ?? '');
+  $msgs = [];
+  $res = $conn->query("SELECT * FROM chat_messages WHERE session_id='$sid' ORDER BY created_at ASC");
+  if ($res) while ($row = $res->fetch_assoc()) $msgs[] = $row;
+  return ['messages' => $msgs];
+}
+
 // ── TICKET FUNCTIONS (PHP-native) ─────────────────────────────────────────────
 
 function ticket_create($conn, $input) {
@@ -393,7 +432,7 @@ function ticket_create($conn, $input) {
   if (!empty($input['content'])) {
     $mid = uuid4();
     $name = $input['visitor_name'];
-    $stmt2 = $conn->prepare("INSERT INTO ticket_messages (id, ticket_id, sender_type, sender_name, content) VALUES (?,'customer',?,?)");
+    $stmt2 = $conn->prepare("INSERT INTO ticket_messages (id, ticket_id, sender_type, sender_name, content) VALUES (?,?,'customer',?,?)");
     $stmt2->bind_param("ssss", $mid, $tid, $name, $input['content']);
     $stmt2->execute();
   }
@@ -425,6 +464,28 @@ function ticket_assign($conn, $input) {
   $tid = $input['ticket_id'] ?? '';
   $assignee = $conn->real_escape_string($input['assigned_to'] ?? '');
   $conn->query("UPDATE support_tickets SET assigned_to='$assignee' WHERE id='$tid'");
+  return ['success' => true];
+}
+
+function ticket_list($conn) {
+  $res = $conn->query("SELECT * FROM support_tickets ORDER BY updated_at DESC");
+  $tickets = [];
+  if ($res) while ($row = $res->fetch_assoc()) $tickets[] = $row;
+  return ['tickets' => $tickets];
+}
+
+function ticket_messages($conn, $input) {
+  $tid = $conn->real_escape_string($input['ticket_id'] ?? '');
+  $msgs = [];
+  $res = $conn->query("SELECT * FROM ticket_messages WHERE ticket_id='$tid' ORDER BY created_at ASC");
+  if ($res) while ($row = $res->fetch_assoc()) $msgs[] = $row;
+  return ['messages' => $msgs];
+}
+
+function ticket_delete($conn, $input) {
+  $tid = $conn->real_escape_string($input['ticket_id'] ?? '');
+  $conn->query("DELETE FROM ticket_messages WHERE ticket_id='$tid'");
+  $conn->query("DELETE FROM support_tickets WHERE id='$tid'");
   return ['success' => true];
 }
 
@@ -1037,6 +1098,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'run-migration') {
     "CREATE TABLE IF NOT EXISTS ticket_messages (id VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()), ticket_id VARCHAR(36) NOT NULL, sender_type ENUM('customer','admin') NOT NULL DEFAULT 'customer', sender_name VARCHAR(255), content TEXT NOT NULL, is_internal TINYINT(1) DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE) ENGINE=InnoDB",
     // chat tables
     "CREATE TABLE IF NOT EXISTS chat_sessions (id VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()), visitor_name VARCHAR(255), visitor_email VARCHAR(255), visitor_phone VARCHAR(50), visitor_address TEXT, visitor_country VARCHAR(100), category ENUM('general','billing','sales','technical') DEFAULT 'general', mode ENUM('ai','human','ended') DEFAULT 'ai', admin_id INT DEFAULT NULL, ticket_created TINYINT(1) DEFAULT 0, started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, ended_at TIMESTAMP NULL DEFAULT NULL) ENGINE=InnoDB",
+    "ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS visitor_typing_at TIMESTAMP NULL",
+    "ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS admin_typing_at TIMESTAMP NULL",
     "CREATE TABLE IF NOT EXISTS chat_messages (id VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()), session_id VARCHAR(36) NOT NULL, sender_type ENUM('visitor','ai','admin','system') NOT NULL, content TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE) ENGINE=InnoDB",
     // client portal
     "CREATE TABLE IF NOT EXISTS clients (id VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()), client_id VARCHAR(20) NOT NULL UNIQUE, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL UNIQUE, phone VARCHAR(50), business_name VARCHAR(255), password VARCHAR(255) NOT NULL, status ENUM('pending_verification','active','suspended') DEFAULT 'pending_verification', first_login_completed TINYINT(1) DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB",

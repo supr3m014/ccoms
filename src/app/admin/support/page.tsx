@@ -88,34 +88,44 @@ export default function TicketDeskPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
+  const apiGet = async (action: string, params: Record<string, string> = {}) => {
+    const url = new URL(BRIDGE)
+    url.searchParams.append('action', action)
+    for (const [k, v] of Object.entries(params)) url.searchParams.append(k, v)
+    const res = await fetch(url.toString())
+    return res.json()
+  }
+
   const fetchTickets = async () => {
     try {
-      let query = supabase.from('support_tickets').select('*').order('updated_at', { ascending: false })
-      if (filter !== 'all') query = query.eq('status', filter)
-      const { data, error } = await query
-      if (error) throw error
-      setTickets(data || [])
+      const { tickets, error } = await apiGet('ticket-list')
+      if (error) throw new Error(error)
+      let data = tickets || []
+      if (filter !== 'all') data = data.filter((t: any) => t.status === filter)
+      setTickets(data)
     } catch (e) { console.error('fetchTickets', e) }
     finally { setLoading(false) }
   }
 
   const fetchAgents = async () => {
-    const { data } = await supabase.from('auth_users').select('email').order('email')
-    setAgents((data || []).map((u: any) => u.email))
+    try {
+      const { users } = await apiGet('list-users')
+      setAgents((users || []).map((u: any) => u.email))
+    } catch (e) { console.error('fetchAgents', e) }
   }
 
   const fetchMessages = async (ticketId: string) => {
     setLoadingMessages(true)
     try {
-      const { data, error } = await supabase
-        .from('ticket_messages').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true })
-      if (error) throw error
-      setMessages(data || [])
+      const { messages, error } = await apiGet('ticket-messages', { ticket_id: ticketId })
+      if (error) throw new Error(error)
+      setMessages(messages || [])
     } catch (e) { console.error('fetchMessages', e) }
     finally { setLoadingMessages(false) }
   }
 
-  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
+
   const apiCall = async (action: string, extra: any = {}) => {
     const phpAction = action === 'reply' ? 'ticket-reply'
       : action === 'update-status' ? 'ticket-status'
@@ -166,8 +176,8 @@ export default function TicketDeskPage() {
   const deleteTicket = async (ticketId: string) => {
     const ok = await showConfirm('Delete this ticket and all messages? This cannot be undone.', { destructive: true })
     if (!ok) return
-    const { error } = await supabase.from('support_tickets').delete().eq('id', ticketId)
-    if (error) { showToast('Failed to delete', 'error'); return }
+    const result = await apiCall('ticket-delete', { ticket_id: ticketId })
+    if (result.error) { showToast('Failed to delete', 'error'); return }
     setTickets(prev => prev.filter(t => t.id !== ticketId))
     if (selectedTicket?.id === ticketId) { setSelectedTicket(null); setMessages([]) }
     showToast('Ticket deleted', 'success')
@@ -185,8 +195,10 @@ export default function TicketDeskPage() {
     showToast('Ticket created — admin notified by email', 'success')
   }
 
-  const formatTime = (iso: string) =>
-    new Date(iso).toLocaleString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const formatTime = (iso: string) => {
+    const dateStr = iso.endsWith('Z') ? iso : `${iso}Z`;
+    return new Date(dateStr).toLocaleString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
 
   const filtered = tickets.filter(t =>
     !search || t.subject.toLowerCase().includes(search.toLowerCase()) ||

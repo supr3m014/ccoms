@@ -40,6 +40,8 @@ export default function LiveChatHubPage() {
   const sessionPollRef = useRef<NodeJS.Timeout | null>(null)
   const msgPollRef = useRef<NodeJS.Timeout | null>(null)
   const lastMsgCount = useRef(0)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [visitorTyping, setVisitorTyping] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const selectedSessionData = sessions.find(s => s.id === selectedSession)
@@ -111,7 +113,16 @@ export default function LiveChatHubPage() {
         lastMsgCount.current = incoming.length
         return incoming
       })
-      if (data.session) setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, ...data.session } : s))
+      if (data.session) {
+        setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, ...data.session } : s))
+        if (data.session.visitor_typing_at) {
+          const dateStr = data.session.visitor_typing_at.endsWith('Z') ? data.session.visitor_typing_at : `${data.session.visitor_typing_at}Z`
+          const isTyping = Date.now() - new Date(dateStr).getTime() < 5000
+          setVisitorTyping(isTyping)
+        } else {
+          setVisitorTyping(false)
+        }
+      }
     } catch {}
   }
 
@@ -128,6 +139,15 @@ export default function LiveChatHubPage() {
 
   const handleInputChange = (value: string) => {
     setInput(value)
+
+    if (!typingTimeoutRef.current && selectedSession) {
+      bridgePost('chat-typing', { session_id: selectedSession, type: 'admin' }).catch(() => {})
+    }
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+    typingTimeoutRef.current = setTimeout(() => {
+      typingTimeoutRef.current = null
+    }, 2000)
+
     // Detect shorthand: last word starting with /
     const lastWord = value.split(' ').pop() || ''
     if (lastWord.startsWith('/') && lastWord.length > 1) {
@@ -162,7 +182,8 @@ export default function LiveChatHubPage() {
     new Date(iso).toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })
 
   const formatElapsed = (started: string) => {
-    const mins = Math.floor((Date.now() - new Date(started).getTime()) / 60000)
+    const dateStr = started.endsWith('Z') ? started : `${started}Z`
+    const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000)
     return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`
   }
 
@@ -259,6 +280,18 @@ export default function LiveChatHubPage() {
                 </div>
               </div>
             ))}
+            {visitorTyping && (
+              <div className="flex justify-start">
+                <div className="flex items-end gap-2 max-w-[75%]">
+                  <User className="w-5 h-5 text-blue-400 shrink-0 mb-1" />
+                  <div>
+                    <div className="px-4 py-2.5 rounded-2xl bg-white border border-gray-200 text-gray-500 text-sm italic">
+                      {selectedSessionData?.visitor_name} is typing...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 

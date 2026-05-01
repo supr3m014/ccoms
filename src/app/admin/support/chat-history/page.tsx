@@ -28,7 +28,8 @@ interface ChatMessage {
 }
 
 function formatUTC8(iso: string) {
-  return new Date(iso).toLocaleString('en-PH', {
+  const dateStr = iso.endsWith('Z') ? iso : `${iso}Z`;
+  return new Date(dateStr).toLocaleString('en-PH', {
     timeZone: 'Asia/Manila',
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -36,7 +37,8 @@ function formatUTC8(iso: string) {
 }
 
 function formatTimeOnly(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-PH', {
+  const dateStr = iso.endsWith('Z') ? iso : `${iso}Z`;
+  return new Date(dateStr).toLocaleTimeString('en-PH', {
     timeZone: 'Asia/Manila',
     hour: '2-digit', minute: '2-digit',
   })
@@ -62,14 +64,20 @@ export default function ChatHistoryPage() {
 
   useEffect(() => { fetchSessions() }, [])
 
+  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
+  const apiGet = async (action: string, params: Record<string, string> = {}) => {
+    const url = new URL(BRIDGE)
+    url.searchParams.append('action', action)
+    for (const [k, v] of Object.entries(params)) url.searchParams.append(k, v)
+    const res = await fetch(url.toString())
+    return res.json()
+  }
+
   const fetchSessions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('chat_sessions')
-        .select('*')
-        .order('started_at', { ascending: false })
-      if (error) throw error
-      setSessions(data || [])
+      const { sessions, error } = await apiGet('chat-history-list')
+      if (error) throw new Error(error)
+      setSessions(sessions || [])
     } catch (e) {
       console.error('Failed to load chat history', e)
     } finally {
@@ -81,13 +89,9 @@ export default function ChatHistoryPage() {
     if (messages[sessionId]) { setExpanded(sessionId); return }
     setLoadingMessages(sessionId)
     try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true })
-      if (error) throw error
-      setMessages(prev => ({ ...prev, [sessionId]: data || [] }))
+      const { messages: msgs, error } = await apiGet('chat-history-messages', { session_id: sessionId })
+      if (error) throw new Error(error)
+      setMessages(prev => ({ ...prev, [sessionId]: msgs || [] }))
       setExpanded(sessionId)
     } catch {}
     setLoadingMessages(null)
@@ -174,7 +178,7 @@ export default function ChatHistoryPage() {
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${catColor(session.category)}`}>{session.category}</span>
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-600 whitespace-nowrap">
-                      {new Date(session.started_at).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', day: 'numeric', month: 'short', year: 'numeric' })}
+                      {new Date(session.started_at.endsWith('Z') ? session.started_at : `${session.started_at}Z`).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', day: 'numeric', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-600 whitespace-nowrap">
                       <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-gray-400" />{formatHourSpan(session.started_at, session.ended_at)}</span>

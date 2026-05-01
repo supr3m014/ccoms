@@ -27,7 +27,9 @@ export default function ChatWidget() {
   const [lastPoll, setLastPoll] = useState<string>(new Date().toISOString())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [chatError, setChatError] = useState<string | null>(null)
+  const [adminTyping, setAdminTyping] = useState(false)
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', address: '', country: 'Philippines',
@@ -100,6 +102,13 @@ export default function ChatWidget() {
           if (!ticketOffered) setTicketOffered(true)
         }
         if (data.session?.mode) setMode(data.session.mode)
+        if (data.session?.admin_typing_at) {
+          const dateStr = data.session.admin_typing_at.endsWith('Z') ? data.session.admin_typing_at : `${data.session.admin_typing_at}Z`
+          const isTyping = Date.now() - new Date(dateStr).getTime() < 5000
+          setAdminTyping(isTyping)
+        } else {
+          setAdminTyping(false)
+        }
       } catch {}
     }, 2500)
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
@@ -181,6 +190,17 @@ export default function ChatWidget() {
         <MessageCircle className="w-6 h-6" />
       </button>
     )
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value)
+    if (!typingTimeoutRef.current && sessionId) {
+      bridgePost('chat-typing', { session_id: sessionId, type: 'visitor' }).catch(() => {})
+    }
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+    typingTimeoutRef.current = setTimeout(() => {
+      typingTimeoutRef.current = null
+    }, 2000)
   }
 
   return (
@@ -293,13 +313,20 @@ export default function ChatWidget() {
                 </div>
               </div>
             )}
+            {adminTyping && !sending && (
+              <div className="flex justify-start">
+                <div className="bg-white border border-gray-100 shadow-sm px-4 py-3 rounded-2xl flex gap-1.5 items-center italic text-xs text-gray-500">
+                  Agent is typing...
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
           <div className="p-3 bg-white border-t border-gray-200 flex gap-2 shrink-0">
             <input
               type="text"
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
               placeholder="Type your message..."
               className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
