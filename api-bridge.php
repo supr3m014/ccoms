@@ -309,9 +309,10 @@ function chat_send($conn, $input) {
 
 function chat_takeover($conn, $input) {
   $sid = $input['session_id'] ?? '';
+  $agent_name = $input['agent_name'] ?? 'An agent';
   $conn->query("UPDATE chat_sessions SET mode='human' WHERE id='$sid'");
   $mid = uuid4();
-  $msg = '🔄 An agent has joined the chat and will assist you now.';
+  $msg = "🔄 $agent_name has joined the chat and will assist you now.";
   $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'system', ?)");
   $stmt->bind_param("sss", $mid, $sid, $msg);
   $stmt->execute();

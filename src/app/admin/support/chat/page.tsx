@@ -127,8 +127,10 @@ export default function LiveChatHubPage() {
   }
 
   const takeover = async (sessionId: string) => {
+    const agentName = window.prompt("Enter your name or alias to join the chat:", "Support Agent");
+    if (!agentName) return; // User cancelled
     try {
-      await bridgePost('chat-takeover', { session_id: sessionId })
+      await bridgePost('chat-takeover', { session_id: sessionId, agent_name: agentName.trim() })
       showToast("You've taken over the chat", 'success')
       await fetchMessages(sessionId)
       fetchSessions()
