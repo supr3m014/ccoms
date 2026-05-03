@@ -2,6 +2,7 @@ out/
 src/
 .next/
 node_modules/
+uploads/
 .env*
 .DS_Store
 *.sql
