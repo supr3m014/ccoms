@@ -5,28 +5,31 @@
   # Redirect /index.html to /
   RewriteRule ^index\.html$ / [R=301,L]
 
-  # If physical file exists (like .png, .css, .js), serve it directly
+  # Serve static assets directly — never pass through PHP
   RewriteCond %{REQUEST_FILENAME} -f
+  RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|txt|xml|json|php|webp|mp4|webm|pdf|zip)$ [NC]
   RewriteRule ^ - [L]
 
-  # If the request has a trailing slash (e.g., /case-studies/), 
-  # check if the corresponding .html exists (e.g., /case-studies.html).
-  # If so, redirect to the extensionless version (remove trailing slash).
+  # Serve api-bridge.php and serve-page.php directly
+  RewriteRule ^(api-bridge|serve-page)\.php$ - [L]
+
+  # Strip trailing slash and redirect (e.g. /about/ → /about)
   RewriteCond %{REQUEST_URI} ^/(.+)/$
   RewriteCond %{DOCUMENT_ROOT}/%1.html -f
   RewriteRule ^(.*)/$ /$1 [L,R=301]
 
-  # Map extensionless URL to .html
-  # Check if the requested URI + .html exists as a file.
-  # We DO NOT use !-d here. We want to serve the HTML file even if an empty "Ghost" directory exists.
-  RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_URI}\.html -f
-  RewriteRule ^(.*)$ $1.html [L]
+  # Route HTML page requests through serve-page.php (injects SEO scripts into <head>)
+  RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_URI}.html -f
+  RewriteRule ^(.*)$ /serve-page.php [L,QSA]
 
-  # If the request maps to a directory and there is an index.html inside, serve it.
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteCond %{REQUEST_FILENAME}/index.html -f
-  RewriteRule ^(.*)$ $1/index.html [L]
+  RewriteRule ^(.*)$ /serve-page.php [L,QSA]
 
-  # Custom 404 page
-  ErrorDocument 404 /404.html
+  # Fallback for root /
+  RewriteCond %{REQUEST_URI} ^/$
+  RewriteRule ^ /serve-page.php [L,QSA]
+
+  # Custom 404
+  ErrorDocument 404 /serve-page.php
 </IfModule>
