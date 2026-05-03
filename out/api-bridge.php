@@ -55,7 +55,7 @@ if ($_SERVER['HTTP_HOST'] === 'localhost' || strpos($_SERVER['HTTP_HOST'], 'loca
   $db_pass = '';  // XAMPP default: no password
 } else {
   // PRODUCTION (Hostinger)
-  $db_host = 'auth-db2053.hstgr.io';
+  $db_host = 'localhost';
   $db_name = 'u520390024_ccomsdb';
   $db_user = 'u520390024_ccomsdbuser';
   $db_pass = '2dIta80$WhZXkZp*';
@@ -83,10 +83,9 @@ session_start();
 
 // Routes
 function route_auth() {
-  global $conn;
-  $method = $_SERVER['REQUEST_METHOD'];
+  global $conn, $method, $input;
+
   $action = $_GET['action'] ?? '';
-  $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
   switch ($action) {
     case 'sign-in':
@@ -349,18 +348,7 @@ function chat_poll($conn) {
   if ($type === 'admin-sessions') {
     $result = $conn->query("SELECT * FROM chat_sessions WHERE mode IN ('ai','human') ORDER BY started_at DESC");
     $sessions = [];
-    if ($result) {
-      while ($row = $result->fetch_assoc()) {
-        $sid_safe = $conn->real_escape_string($row['id']);
-        $mres = $conn->query("SELECT sender_type, created_at FROM chat_messages WHERE session_id='$sid_safe' ORDER BY created_at DESC LIMIT 1");
-        if ($mres && $mres->num_rows > 0) {
-          $mrow = $mres->fetch_assoc();
-          $row['last_message_sender'] = $mrow['sender_type'];
-          $row['last_message_at'] = $mrow['created_at'];
-        }
-        $sessions[] = $row;
-      }
-    }
+    if ($result) while ($row = $result->fetch_assoc()) $sessions[] = $row;
     return ['sessions' => $sessions];
   }
 
@@ -453,7 +441,7 @@ function ticket_create($conn, $input) {
 }
 
 function ticket_reply($conn, $input) {
-  $tid = $conn->real_escape_string($input['ticket_id'] ?? '');
+  $tid = $input['ticket_id'] ?? '';
   $content = $input['content'] ?? '';
   $internal = isset($input['is_internal']) && $input['is_internal'] ? 1 : 0;
   $mid = uuid4();
@@ -463,45 +451,6 @@ function ticket_reply($conn, $input) {
   $stmt->execute();
   $now = mysql_now();
   $conn->query("UPDATE support_tickets SET updated_at='$now' WHERE id='$tid'");
-
-  // Email Notification Logic
-  if (!$internal) {
-    $res = $conn->query("SELECT visitor_name, visitor_email, chat_session_id FROM support_tickets WHERE id='$tid'");
-    if ($res && $res->num_rows > 0) {
-      $ticket = $res->fetch_assoc();
-      $email = $ticket['visitor_email'];
-      $name = $ticket['visitor_name'];
-      $sid = $ticket['chat_session_id'];
-
-      if (!empty($email)) {
-        // Check if client
-        $email_safe = $conn->real_escape_string($email);
-        $cres = $conn->query("SELECT id FROM clients WHERE email='$email_safe'");
-        $is_client = ($cres && $cres->num_rows > 0);
-
-        $subject = "Update on your Core Conversion Support Ticket";
-        $headers = "From: support@ccoms.ph\r\nReply-To: support@ccoms.ph";
-        
-        if ($is_client) {
-          $body = "Hi $name,\r\n\r\n"
-            . "A new response has been added to your support ticket.\r\n\r\n"
-            . "Message: $content\r\n\r\n"
-            . "Please log in to your Client Portal to reply or view details: https://ccoms.ph/client-dashboard\r\n\r\n"
-            . "Best regards,\r\nCore Conversion Support Team";
-        } else {
-          $resume_link = $sid ? "https://ccoms.ph?resume_chat=$sid" : "https://ccoms.ph";
-          $body = "Hi $name,\r\n\r\n"
-            . "Our team has replied to your inquiry.\r\n\r\n"
-            . "Message: $content\r\n\r\n"
-            . "If you'd like to reply in real-time, click the link below to securely resume our live chat thread:\r\n"
-            . "$resume_link\r\n\r\n"
-            . "Best regards,\r\nCore Conversion Support Team";
-        }
-        @mail($email, $subject, $body, $headers);
-      }
-    }
-  }
-
   return ['success' => true];
 }
 
