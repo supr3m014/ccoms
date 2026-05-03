@@ -5,31 +5,27 @@
   # Redirect /index.html to /
   RewriteRule ^index\.html$ / [R=301,L]
 
-  # Serve static assets directly — never pass through PHP
+  # Serve existing files directly (js, css, images, php, etc.)
   RewriteCond %{REQUEST_FILENAME} -f
-  RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|txt|xml|json|php|webp|mp4|webm|pdf|zip)$ [NC]
   RewriteRule ^ - [L]
 
-  # Serve api-bridge.php and serve-page.php directly
-  RewriteRule ^(api-bridge|serve-page)\.php$ - [L]
-
-  # Strip trailing slash and redirect (e.g. /about/ → /about)
+  # Strip trailing slash
   RewriteCond %{REQUEST_URI} ^/(.+)/$
   RewriteCond %{DOCUMENT_ROOT}/%1.html -f
   RewriteRule ^(.*)/$ /$1 [L,R=301]
 
-  # Route HTML page requests through serve-page.php (injects SEO scripts into <head>)
-  RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_URI}.html -f
-  RewriteRule ^(.*)$ /serve-page.php [L,QSA]
+  # Map extensionless URL → serve-page.php passing URI explicitly
+  RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}.html -f
+  RewriteRule ^(.*)$ /serve-page.php?uri=%{REQUEST_URI} [L,QSA]
 
+  # Directory with index.html
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteCond %{REQUEST_FILENAME}/index.html -f
-  RewriteRule ^(.*)$ /serve-page.php [L,QSA]
+  RewriteRule ^(.*)$ /serve-page.php?uri=%{REQUEST_URI} [L,QSA]
 
-  # Fallback for root /
-  RewriteCond %{REQUEST_URI} ^/$
-  RewriteRule ^ /serve-page.php [L,QSA]
+  # Site root
+  RewriteRule ^$ /serve-page.php?uri=/ [L,QSA]
 
-  # Custom 404 page
-  ErrorDocument 404 /serve-page.php
+  # 404
+  ErrorDocument 404 /404.html
 </IfModule>
