@@ -347,7 +347,7 @@ function chat_poll($conn) {
   $type = $_GET['type'] ?? '';
 
   if ($type === 'admin-sessions') {
-    $result = $conn->query("SELECT * FROM chat_sessions WHERE mode IN ('ai','human') ORDER BY started_at DESC");
+    $result = $conn->query("SELECT * FROM chat_sessions ORDER BY started_at DESC");
     $sessions = [];
     if ($result) {
       while ($row = $result->fetch_assoc()) {
