@@ -5,7 +5,7 @@
   # Redirect /index.html to /
   RewriteRule ^index\.html$ / [R=301,L]
 
-  # Serve existing files directly (js, css, images, php, etc.)
+  # If physical file exists (like .png, .css, .js, .php), serve it directly
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
@@ -14,18 +14,15 @@
   RewriteCond %{DOCUMENT_ROOT}/%1.html -f
   RewriteRule ^(.*)/$ /$1 [L,R=301]
 
-  # Map extensionless URL → serve-page.php passing URI explicitly
-  RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}.html -f
-  RewriteRule ^(.*)$ /serve-page.php?uri=%{REQUEST_URI} [L,QSA]
+  # Map extensionless URL to .html
+  RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_URI}\.html -f
+  RewriteRule ^(.*)$ $1.html [L]
 
   # Directory with index.html
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteCond %{REQUEST_FILENAME}/index.html -f
-  RewriteRule ^(.*)$ /serve-page.php?uri=%{REQUEST_URI} [L,QSA]
+  RewriteRule ^(.*)$ $1/index.html [L]
 
-  # Site root
-  RewriteRule ^$ /serve-page.php?uri=/ [L,QSA]
-
-  # 404
+  # Custom 404
   ErrorDocument 404 /404.html
 </IfModule>
