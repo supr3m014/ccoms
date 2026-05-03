@@ -55,7 +55,7 @@ if ($_SERVER['HTTP_HOST'] === 'localhost' || strpos($_SERVER['HTTP_HOST'], 'loca
   $db_pass = '';  // XAMPP default: no password
 } else {
   // PRODUCTION (Hostinger)
-  $db_host = 'auth-db2053.hstgr.io';
+  $db_host = 'localhost';
   $db_name = 'u520390024_ccomsdb';
   $db_user = 'u520390024_ccomsdbuser';
   $db_pass = '2dIta80$WhZXkZp*';
