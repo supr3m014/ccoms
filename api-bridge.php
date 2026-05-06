@@ -157,12 +157,6 @@ function route_auth() {
     // Client email credentials
     case 'client-email-creds':
       return client_email_creds($conn, $input);
-    // SEO
-    case 'generate-sitemap':   return seo_generate_sitemap($conn);
-    case 'apply-redirects':    return seo_apply_redirects($conn);
-    case 'log-404':            return seo_log_404($conn, $input);
-    case 'seo-file-read':      return seo_file_read($input);
-    case 'seo-file-write':     return seo_file_write($input);
     default:
       return ['error' => 'Unknown auth action'];
   }
@@ -615,17 +609,14 @@ function route_table() {
     case 'GET':
       return table_select($conn, $table);
     case 'POST':
-      $result = isset($_GET['upsert']) ? table_upsert($conn, $table, $input) : table_insert($conn, $table, $input);
-      if ($table === 'redirects' && !isset($result['error'])) seo_apply_redirects($conn);
-      return $result;
+      if (isset($_GET['upsert'])) {
+        return table_upsert($conn, $table, $input);
+      }
+      return table_insert($conn, $table, $input);
     case 'PUT':
-      $result = table_update($conn, $table, $input);
-      if ($table === 'redirects' && !isset($result['error'])) seo_apply_redirects($conn);
-      return $result;
+      return table_update($conn, $table, $input);
     case 'DELETE':
-      $result = table_delete($conn, $table, $input);
-      if ($table === 'redirects' && !isset($result['error'])) seo_apply_redirects($conn);
-      return $result;
+      return table_delete($conn, $table, $input);
     default:
       return ['error' => 'Method not allowed'];
   }
@@ -1213,119 +1204,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'run-migration') {
   exit();
 }
 // ── END MIGRATION ENDPOINT ─────────────────────────────────────────────────────
-
-// ── SEO FUNCTIONS ──────────────────────────────────────────────────────────────
-
-function seo_generate_sitemap($conn) {
-  $base = 'https://ccoms.ph';
-  $today = date('Y-m-d');
-  $root = $_SERVER['DOCUMENT_ROOT'];
-  $static = [
-    ['loc'=>'/',                                 'priority'=>'1.0','freq'=>'weekly'],
-    ['loc'=>'/about',                            'priority'=>'0.8','freq'=>'monthly'],
-    ['loc'=>'/services',                         'priority'=>'0.9','freq'=>'weekly'],
-    ['loc'=>'/services/seo',                     'priority'=>'0.8','freq'=>'weekly'],
-    ['loc'=>'/services/aeo',                     'priority'=>'0.8','freq'=>'weekly'],
-    ['loc'=>'/services/geo',                     'priority'=>'0.8','freq'=>'weekly'],
-    ['loc'=>'/services/website-development',     'priority'=>'0.8','freq'=>'weekly'],
-    ['loc'=>'/services/mobile-app-development',  'priority'=>'0.8','freq'=>'weekly'],
-    ['loc'=>'/services/brand-marketing-design',  'priority'=>'0.7','freq'=>'monthly'],
-    ['loc'=>'/services/video-production',        'priority'=>'0.7','freq'=>'monthly'],
-    ['loc'=>'/services/local-seo',               'priority'=>'0.8','freq'=>'weekly'],
-    ['loc'=>'/case-studies',                     'priority'=>'0.7','freq'=>'weekly'],
-    ['loc'=>'/blog',                             'priority'=>'0.8','freq'=>'daily'],
-    ['loc'=>'/contact',                          'priority'=>'0.6','freq'=>'monthly'],
-  ];
-  $urls = [];
-  foreach ($static as $s) {
-    $urls[] = "<url><loc>{$base}{$s['loc']}</loc><lastmod>{$today}</lastmod><changefreq>{$s['freq']}</changefreq><priority>{$s['priority']}</priority></url>";
-  }
-  $r = $conn->query("SELECT slug, updated_at FROM pages WHERE visibility='public' AND slug IS NOT NULL");
-  if ($r) while ($row = $r->fetch_assoc()) {
-    $mod = date('Y-m-d', strtotime($row['updated_at']));
-    $urls[] = "<url><loc>{$base}/{$row['slug']}</loc><lastmod>{$mod}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>";
-  }
-  $r2 = $conn->query("SELECT slug, updated_at FROM posts WHERE status='published' AND slug IS NOT NULL");
-  if ($r2) while ($row = $r2->fetch_assoc()) {
-    $mod = date('Y-m-d', strtotime($row['updated_at']));
-    $urls[] = "<url><loc>{$base}/blog/{$row['slug']}</loc><lastmod>{$mod}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>";
-  }
-  $xml  = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
-  $xml .= implode("\n", $urls) . "\n</urlset>";
-  if (file_put_contents($root . '/sitemap.xml', $xml) === false)
-    return ['error' => 'Cannot write sitemap.xml — check file permissions'];
-  // Blog sitemap
-  $blog_urls = [];
-  $r3 = $conn->query("SELECT slug, updated_at FROM posts WHERE status='published' AND slug IS NOT NULL ORDER BY updated_at DESC");
-  if ($r3) while ($row = $r3->fetch_assoc()) {
-    $mod = date('Y-m-d', strtotime($row['updated_at']));
-    $blog_urls[] = "<url><loc>{$base}/blog/{$row['slug']}</loc><lastmod>{$mod}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>";
-  }
-  $bxml  = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
-  $bxml .= implode("\n", $blog_urls) . "\n</urlset>";
-  file_put_contents($root . '/sitemap-blog.xml', $bxml);
-  return ['success' => true, 'urls' => count($urls), 'message' => 'Sitemaps generated successfully'];
-}
-
-function seo_apply_redirects($conn) {
-  $path = $_SERVER['DOCUMENT_ROOT'] . '/.htaccess';
-  $current = @file_get_contents($path);
-  if ($current === false) return ['error' => 'Cannot read .htaccess'];
-  $current = preg_replace('/# BEGIN CCOMS_REDIRECTS.*?# END CCOMS_REDIRECTS\n?/s', '', $current);
-  $r = $conn->query("SELECT redirect_from, redirect_to, status_code FROM redirects WHERE enabled=1 ORDER BY created_at ASC");
-  $rules = [];
-  if ($r) while ($row = $r->fetch_assoc()) {
-    $from = addcslashes(ltrim($row['redirect_from'], '/'), '.');
-    $to   = $row['redirect_to'];
-    $code = intval($row['status_code']);
-    $flag = ($code === 302) ? 'R=302' : (($code === 307) ? 'R=307' : 'R=301');
-    $rules[] = "RewriteRule ^{$from}$ {$to} [{$flag},L]";
-  }
-  if (!empty($rules)) {
-    $block  = "# BEGIN CCOMS_REDIRECTS\n<IfModule mod_rewrite.c>\nRewriteEngine On\n";
-    $block .= implode("\n", $rules) . "\n</IfModule>\n# END CCOMS_REDIRECTS\n";
-    $current = $block . $current;
-  }
-  if (file_put_contents($path, $current) !== false) return ['success' => true, 'rules' => count($rules)];
-  return ['error' => 'Failed to write .htaccess'];
-}
-
-function seo_log_404($conn, $input) {
-  $url = $conn->real_escape_string($input['url'] ?? '');
-  $ref = $conn->real_escape_string($input['referrer'] ?? '');
-  if (!$url) return ['error' => 'url required'];
-  $ex = $conn->query("SELECT id FROM error_404_log WHERE url='$url'");
-  if ($ex && $ex->num_rows > 0) {
-    $conn->query("UPDATE error_404_log SET hit_count=hit_count+1, last_seen_at=NOW() WHERE url='$url'");
-  } else {
-    $id = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',mt_rand(0,0xffff),mt_rand(0,0xffff),mt_rand(0,0xffff),mt_rand(0,0x0fff)|0x4000,mt_rand(0,0x3fff)|0x8000,mt_rand(0,0xffff),mt_rand(0,0xffff),mt_rand(0,0xffff));
-    $conn->query("INSERT INTO error_404_log (id,url,referrer) VALUES ('$id','$url','$ref')");
-  }
-  return ['success' => true];
-}
-
-function seo_allowed_file($name) {
-  return in_array(basename($name), ['robots.txt','llms.txt','ads.txt','security.txt','humans.txt','sitemap.xml','sitemap-blog.xml']);
-}
-
-function seo_file_read($input) {
-  $name = $input['file'] ?? '';
-  if (!seo_allowed_file($name)) return ['error' => 'File not allowed'];
-  $path = $_SERVER['DOCUMENT_ROOT'] . '/' . basename($name);
-  if (!file_exists($path)) return ['content' => '', 'exists' => false];
-  return ['content' => file_get_contents($path), 'exists' => true];
-}
-
-function seo_file_write($input) {
-  $name    = $input['file'] ?? '';
-  $content = $input['content'] ?? '';
-  if (!seo_allowed_file($name)) return ['error' => 'File not allowed'];
-  $path = $_SERVER['DOCUMENT_ROOT'] . '/' . basename($name);
-  if (file_put_contents($path, $content) !== false) return ['success' => true];
-  return ['error' => 'Cannot write file — check permissions'];
-}
-
-// ── END SEO FUNCTIONS ──────────────────────────────────────────────────────────
 
 try {
   if (isset($_GET['action'])) {
