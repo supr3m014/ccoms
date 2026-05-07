@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useToast } from '@/contexts/ToastContext'
 
 export default function GeneralSettingsPage() {
-  const { showToast } = useToast()
   const [siteName, setSiteName] = useState('Core Conversion')
   const [tagline, setTagline] = useState('')
   const [adminEmail, setAdminEmail] = useState('')
@@ -64,10 +62,10 @@ export default function GeneralSettingsPage() {
 
       if (error) throw error
 
-      showToast('Settings saved successfully!', 'success')
+      alert('Settings saved successfully!')
     } catch (error: any) {
       console.error('Error saving settings:', error)
-      showToast(error.message || 'Failed to save settings', 'error')
+      alert(error.message || 'Failed to save settings')
     }
   }
 

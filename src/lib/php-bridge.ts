@@ -1,9 +1,5 @@
-// PHP Bridge Client - Replaces Supabase for Hostinger MySQL
-// Provides a Supabase-compatible interface for the PHP API
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ccoms.ph/api-bridge.php'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://yourdomain.com/api-bridge.php'
-
-// HTTP helper functions (module-level)
 const _get = async (url: string) => {
   try {
     const response = await fetch(url, { credentials: 'include' })
@@ -54,8 +50,6 @@ const _delete = async (url: string) => {
   }
 }
 
-// QueryBuilder class - new instance for each from() call to avoid state mutation
-// Implements PromiseLike so it can be awaited while still supporting method chaining
 class QueryBuilder implements PromiseLike<any> {
   private table: string
   private filters: Record<string, any> = {}
@@ -72,7 +66,6 @@ class QueryBuilder implements PromiseLike<any> {
     this.table = table
   }
 
-  // Method chaining for queries
   select = (columns?: string, options?: any): QueryBuilder => {
     this.selectedColumns = columns || '*'
     if (options?.count === 'exact') this.needsCount = true
@@ -112,14 +105,11 @@ class QueryBuilder implements PromiseLike<any> {
     return this
   }
 
-  // Execution methods
   single = async (): Promise<any> => {
     const result = await this._execute()
     if (result.error) return { data: null, error: result.error }
     const rows = result.data || []
-    if (rows.length === 0) {
-      return { data: null, error: { message: 'No rows found', code: 'PGRST116' } }
-    }
+    if (rows.length === 0) return { data: null, error: { message: 'No rows found', code: 'PGRST116' } }
     return { data: rows[0], error: null }
   }
 
@@ -130,21 +120,18 @@ class QueryBuilder implements PromiseLike<any> {
     return { data: rows?.[0] || null, error: null }
   }
 
-  // Insert method (returns builder for chaining, executes on await)
   insert = (data: any[] | any): QueryBuilder => {
     this._pendingOp = 'insert'
     this._pendingData = data
     return this
   }
 
-  // Update method (returns builder for chaining, executes on await)
   update = (data: any): QueryBuilder => {
     this._pendingOp = 'update'
     this._pendingData = data
     return this
   }
 
-  // Upsert method
   upsert = (data: any, options?: { onConflict?: string }): QueryBuilder => {
     this._pendingOp = 'upsert'
     this._pendingData = data
@@ -152,144 +139,74 @@ class QueryBuilder implements PromiseLike<any> {
     return this
   }
 
-  // Delete method (returns builder for chaining, executes on await)
   delete = (): QueryBuilder => {
     this._pendingOp = 'delete'
     return this
   }
 
-  // PromiseLike implementation - makes the builder awaitable while supporting chaining
   then = (resolve?: ((value: any) => any) | null, reject?: ((reason?: any) => any) | null): Promise<any> => {
-    let promise: Promise<any>
-
-    switch (this._pendingOp) {
-      case 'insert': {
-        const data = this._pendingData
-        if (Array.isArray(data)) {
-          if (data.length === 0) {
-            promise = Promise.resolve({ data: null, error: null })
-          } else if (data.length === 1) {
-            promise = _post(`${API_BASE_URL}?table=${this.table}`, data[0])
-          } else {
-            // Bulk: sequential inserts
-            promise = (async () => {
-              let lastResult: any = { data: null, error: null }
-              for (const item of data) {
-                lastResult = await _post(`${API_BASE_URL}?table=${this.table}`, item)
-                if (lastResult.error) return lastResult
-              }
-              return lastResult
-            })()
-          }
-        } else {
-          promise = _post(`${API_BASE_URL}?table=${this.table}`, data)
-        }
-        break
-      }
-      case 'update': {
-        const params = this._buildParams()
-        promise = _put(`${API_BASE_URL}?table=${this.table}&${params.toString()}`, this._pendingData)
-        break
-      }
-      case 'upsert': {
-        const onConflict = this._pendingUpsertOptions?.onConflict || 'id'
-        promise = _post(
-          `${API_BASE_URL}?table=${this.table}&upsert=1&on_conflict=${onConflict}`,
-          this._pendingData
-        )
-        break
-      }
-      case 'delete': {
-        const params = this._buildParams()
-        promise = _delete(`${API_BASE_URL}?table=${this.table}&${params.toString()}`)
-        break
-      }
-      default:
-        promise = this._execute()
-    }
-
-    return promise.then(resolve, reject)
+    return this._run().then(resolve, reject)
   }
 
-  // catch method for PromiseLike
   catch = (onrejected?: ((reason: any) => any) | null): Promise<any> => {
-    let promise: Promise<any>
+    return this._run().catch(onrejected)
+  }
 
+  private _run = (): Promise<any> => {
     switch (this._pendingOp) {
       case 'insert': {
         const data = this._pendingData
         if (Array.isArray(data)) {
-          if (data.length === 0) {
-            promise = Promise.resolve({ data: null, error: null })
-          } else if (data.length === 1) {
-            promise = _post(`${API_BASE_URL}?table=${this.table}`, data[0])
-          } else {
-            promise = (async () => {
-              let lastResult: any = { data: null, error: null }
-              for (const item of data) {
-                lastResult = await _post(`${API_BASE_URL}?table=${this.table}`, item)
-                if (lastResult.error) return lastResult
-              }
-              return lastResult
-            })()
-          }
-        } else {
-          promise = _post(`${API_BASE_URL}?table=${this.table}`, data)
+          if (data.length === 0) return Promise.resolve({ data: null, error: null })
+          if (data.length === 1) return _post(`${API_BASE_URL}?table=${this.table}`, data[0])
+          return (async () => {
+            let last: any = { data: null, error: null }
+            for (const item of data) {
+              last = await _post(`${API_BASE_URL}?table=${this.table}`, item)
+              if (last.error) return last
+            }
+            return last
+          })()
         }
-        break
+        return _post(`${API_BASE_URL}?table=${this.table}`, data)
       }
       case 'update': {
         const params = this._buildParams()
-        promise = _put(`${API_BASE_URL}?table=${this.table}&${params.toString()}`, this._pendingData)
-        break
+        return _put(`${API_BASE_URL}?table=${this.table}&${params.toString()}`, this._pendingData)
       }
       case 'upsert': {
         const onConflict = this._pendingUpsertOptions?.onConflict || 'id'
-        promise = _post(
-          `${API_BASE_URL}?table=${this.table}&upsert=1&on_conflict=${onConflict}`,
-          this._pendingData
-        )
-        break
+        return _post(`${API_BASE_URL}?table=${this.table}&upsert=1&on_conflict=${onConflict}`, this._pendingData)
       }
       case 'delete': {
         const params = this._buildParams()
-        promise = _delete(`${API_BASE_URL}?table=${this.table}&${params.toString()}`)
-        break
+        return _delete(`${API_BASE_URL}?table=${this.table}&${params.toString()}`)
       }
       default:
-        promise = this._execute()
+        return this._execute()
     }
-
-    return promise.catch(onrejected)
   }
 
-  // Private helper methods
   private _buildParams = (): URLSearchParams => {
     const params = new URLSearchParams()
     if (this.needsCount) params.append('count', 'true')
-
     for (const [key, value] of Object.entries(this.filters)) {
       if (key.startsWith('eq_')) {
-        const col = key.replace('eq_', '')
-        params.append(`eq[${col}]`, value as string)
+        params.append(`eq[${key.replace('eq_', '')}]`, value as string)
       } else if (key.startsWith('ilike_')) {
-        const col = key.replace('ilike_', '')
-        params.append(`ilike[${col}]`, value as string)
+        params.append(`ilike[${key.replace('ilike_', '')}]`, value as string)
       } else if (key.startsWith('in_')) {
         const col = key.replace('in_', '')
-        const vals = value as any[]
-        vals.forEach(v => params.append(`in[${col}][]`, v))
+        ;(value as any[]).forEach(v => params.append(`in[${col}][]`, v))
       } else {
         params.append(key, value as string)
       }
     }
-
     if (this.orderColumn) {
       params.append('order', this.orderColumn)
       params.append('order_dir', this.orderDirection)
     }
     if (this.limitCount) params.append('limit', this.limitCount.toString())
-
     return params
   }
 
@@ -300,51 +217,34 @@ class QueryBuilder implements PromiseLike<any> {
   }
 }
 
-// Dev mode check
-const IS_DEV = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-const DEV_USER = { id: 1, email: 'paul@ccoms.ph', role: 'admin' }
-
-// Main PhpBridge class
 class PhpBridge {
   auth = {
-    signInWithPassword: async (credentials: { email: string; password: string }) => {
-      // Dev bypass for localhost
-      if (IS_DEV) {
-        if (credentials.email === 'paul@ccoms.ph') {
-          return { data: { user: DEV_USER, session: { user: DEV_USER } }, error: null }
-        }
-        return { data: null, error: { message: 'Invalid email or password' } }
-      }
-      return _post(`${API_BASE_URL}?action=sign-in`, credentials)
-    },
+    signInWithPassword: async (credentials: { email: string; password: string }) =>
+      _post(`${API_BASE_URL}?action=sign-in`, credentials),
 
-    signOut: async () => {
-      if (IS_DEV) return { data: null, error: null }
-      return _post(`${API_BASE_URL}?action=sign-out`, {})
-    },
+    signOut: async () => _post(`${API_BASE_URL}?action=sign-out`, {}),
 
     getSession: async () => {
-      // Dev bypass for localhost
-      if (IS_DEV) {
-        return { data: { session: { user: DEV_USER } } }
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 5000)
+        const response = await fetch(`${API_BASE_URL}?action=session`, {
+          credentials: 'include',
+          signal: controller.signal,
+        })
+        clearTimeout(timeout)
+        const data = await response.json()
+        const session = data.user ? { user: data.user } : null
+        return { data: { session } }
+      } catch {
+        return { data: { session: null } }
       }
-      const response = await fetch(`${API_BASE_URL}?action=session`, { credentials: 'include' })
-      const data = await response.json()
-      // Normalize: return { data: { session: ... } }
-      const session = data.user ? { user: data.user } : null
-      return { data: { session } }
     },
 
-    signUp: async (params: { email: string; password: string; options?: any }) => {
-      return _post(`${API_BASE_URL}?action=sign-up`, params)
-    },
+    signUp: async (params: { email: string; password: string; options?: any }) =>
+      _post(`${API_BASE_URL}?action=sign-up`, params),
 
     onAuthStateChange: (callback: any) => {
-      // Immediately call once with current session to simulate Supabase behavior
-      if (IS_DEV) {
-        callback('INITIAL_SESSION', { user: DEV_USER })
-        return { data: { subscription: { unsubscribe: () => {} } } }
-      }
       fetch(`${API_BASE_URL}?action=session`, { credentials: 'include' })
         .then(r => r.json())
         .then(data => {
@@ -360,17 +260,12 @@ class PhpBridge {
         const data = await _get(`${API_BASE_URL}?action=list-users`)
         return { data: { users: data.data?.users || [] }, error: data.error }
       },
-
-      deleteUser: async (userId: string | number) => {
-        return _post(`${API_BASE_URL}?action=delete-user`, { id: userId })
-      },
+      deleteUser: async (userId: string | number) =>
+        _post(`${API_BASE_URL}?action=delete-user`, { id: userId }),
     },
   }
 
-  // from() returns a new QueryBuilder instance (no singleton state mutation)
-  from = (table: string): QueryBuilder => {
-    return new QueryBuilder(table)
-  }
+  from = (table: string): QueryBuilder => new QueryBuilder(table)
 }
 
 export const phpBridge = new PhpBridge()

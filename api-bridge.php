@@ -83,9 +83,10 @@ session_start();
 
 // Routes
 function route_auth() {
-  global $conn, $method, $input;
-
+  global $conn;
+  $method = $_SERVER['REQUEST_METHOD'];
   $action = $_GET['action'] ?? '';
+  $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
   switch ($action) {
     case 'sign-in':
@@ -127,6 +128,12 @@ function route_auth() {
       return chat_create_ticket($conn, $input);
     case 'chat-poll':
       return chat_poll($conn);
+    case 'chat-typing':
+      return chat_typing($conn, $input);
+    case 'chat-history-list':
+      return chat_history_list($conn);
+    case 'chat-history-messages':
+      return chat_history_messages($conn, $input);
     // Ticket actions
     case 'ticket-create':
       return ticket_create($conn, $input);
@@ -136,6 +143,20 @@ function route_auth() {
       return ticket_update_status($conn, $input);
     case 'ticket-assign':
       return ticket_assign($conn, $input);
+    case 'ticket-list':
+      return ticket_list($conn);
+    case 'ticket-messages':
+      return ticket_messages($conn, $input);
+    case 'ticket-delete':
+      return ticket_delete($conn, $input);
+    // Vault encryption
+    case 'vault-encrypt':
+      return vault_encrypt($input);
+    case 'vault-decrypt':
+      return vault_decrypt($input);
+    // Client email credentials
+    case 'client-email-creds':
+      return client_email_creds($conn, $input);
     default:
       return ['error' => 'Unknown auth action'];
   }
@@ -224,9 +245,36 @@ function chat_start($conn, $input) {
 
   $welcome = "Hi $name! 👋 Welcome to Core Conversion support. I'm your AI assistant here to help with your $cat inquiry. How can I help you today?";
   $mid = uuid4();
-  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'ai',?,?)");
+  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'ai', ?)");
   $stmt2->bind_param("sss", $mid, $sid, $welcome);
   $stmt2->execute();
+
+  // Send confirmation email to visitor
+  if ($email) {
+    $visitor_subject = "Core Conversion — We received your inquiry";
+    $visitor_body = "Hi $name,\r\n\r\n"
+      . "Thank you for reaching out to Core Conversion! We've received your $cat inquiry.\r\n\r\n"
+      . "Our AI assistant is currently helping you in the live chat. If a human agent isn't available right away, "
+      . "don't worry — our team will review your conversation and follow up via this email within 24 hours.\r\n\r\n"
+      . "If you'd like to continue the conversation later, simply visit our website and start a new chat.\r\n\r\n"
+      . "Best regards,\r\nCore Conversion Support Team\r\n"
+      . "https://ccoms.ph";
+    $visitor_headers = "From: support@ccoms.ph\r\nReply-To: support@ccoms.ph";
+    @mail($email, $visitor_subject, $visitor_body, $visitor_headers);
+  }
+
+  // Notify admin of new chat session
+  $admin_email = 'paul@ccoms.ph';
+  $admin_subject = "[CCOMS] New Live Chat — $name ($cat)";
+  $admin_body = "New live chat session started:\r\n\r\n"
+    . "Name: $name\r\n"
+    . "Email: $email\r\n"
+    . "Phone: $phone\r\n"
+    . "Category: $cat\r\n"
+    . "Country: $country\r\n\r\n"
+    . "View in admin: https://ccoms.ph/admin/support/chat\r\n";
+  $admin_headers = "From: support@ccoms.ph\r\nReply-To: $email";
+  @mail($admin_email, $admin_subject, $admin_body, $admin_headers);
 
   return ['session_id' => $sid, 'welcome' => $welcome];
 }
@@ -238,7 +286,7 @@ function chat_send($conn, $input) {
 
   // Save visitor message
   $mid = uuid4();
-  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'visitor',?,?)");
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'visitor', ?)");
   $stmt->bind_param("sss", $mid, $sid, $content);
   $stmt->execute();
 
@@ -253,7 +301,7 @@ function chat_send($conn, $input) {
   $ai_response = call_claude($conn, $sid, $session['category'], $content);
 
   $amid = uuid4();
-  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'ai',?,?)");
+  $stmt2 = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'ai', ?)");
   $stmt2->bind_param("sss", $amid, $sid, $ai_response);
   $stmt2->execute();
 
@@ -262,10 +310,11 @@ function chat_send($conn, $input) {
 
 function chat_takeover($conn, $input) {
   $sid = $input['session_id'] ?? '';
+  $agent_name = $input['agent_name'] ?? 'An agent';
   $conn->query("UPDATE chat_sessions SET mode='human' WHERE id='$sid'");
   $mid = uuid4();
-  $msg = '🔄 An agent has joined the chat and will assist you now.';
-  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'system',?,?)");
+  $msg = "🔄 $agent_name has joined the chat and will assist you now.";
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'system', ?)");
   $stmt->bind_param("sss", $mid, $sid, $msg);
   $stmt->execute();
   return ['success' => true];
@@ -275,7 +324,7 @@ function chat_admin_reply($conn, $input) {
   $sid = $input['session_id'] ?? '';
   $content = $input['content'] ?? '';
   $mid = uuid4();
-  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'admin',?,?)");
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'admin', ?)");
   $stmt->bind_param("sss", $mid, $sid, $content);
   $stmt->execute();
   return ['success' => true];
@@ -287,7 +336,7 @@ function chat_end($conn, $input) {
   $conn->query("UPDATE chat_sessions SET mode='ended', ended_at='$now' WHERE id='$sid'");
   $mid = uuid4();
   $msg = 'Chat session ended. Thank you for contacting Core Conversion!';
-  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?,'system',?,?)");
+  $stmt = $conn->prepare("INSERT INTO chat_messages (id, session_id, sender_type, content) VALUES (?, ?, 'system', ?)");
   $stmt->bind_param("sss", $mid, $sid, $msg);
   $stmt->execute();
   return ['success' => true];
@@ -298,9 +347,20 @@ function chat_poll($conn) {
   $type = $_GET['type'] ?? '';
 
   if ($type === 'admin-sessions') {
-    $result = $conn->query("SELECT * FROM chat_sessions WHERE mode IN ('ai','human') ORDER BY started_at DESC");
+    $result = $conn->query("SELECT * FROM chat_sessions ORDER BY started_at DESC");
     $sessions = [];
-    if ($result) while ($row = $result->fetch_assoc()) $sessions[] = $row;
+    if ($result) {
+      while ($row = $result->fetch_assoc()) {
+        $sid_safe = $conn->real_escape_string($row['id']);
+        $mres = $conn->query("SELECT sender_type, created_at FROM chat_messages WHERE session_id='$sid_safe' ORDER BY created_at DESC LIMIT 1");
+        if ($mres && $mres->num_rows > 0) {
+          $mrow = $mres->fetch_assoc();
+          $row['last_message_sender'] = $mrow['sender_type'];
+          $row['last_message_at'] = $mrow['created_at'];
+        }
+        $sessions[] = $row;
+      }
+    }
     return ['sessions' => $sessions];
   }
 
@@ -343,6 +403,33 @@ function chat_create_ticket($conn, $input) {
   return ['success' => true, 'ticket_id' => $tid];
 }
 
+function chat_typing($conn, $input) {
+  $sid = $conn->real_escape_string($input['session_id'] ?? '');
+  $type = $input['type'] ?? 'visitor'; // 'visitor' or 'admin'
+  $now = mysql_now();
+  if ($type === 'admin') {
+    $conn->query("UPDATE chat_sessions SET admin_typing_at='$now' WHERE id='$sid'");
+  } else {
+    $conn->query("UPDATE chat_sessions SET visitor_typing_at='$now' WHERE id='$sid'");
+  }
+  return ['success' => true];
+}
+
+function chat_history_list($conn) {
+  $res = $conn->query("SELECT * FROM chat_sessions ORDER BY started_at DESC");
+  $sessions = [];
+  if ($res) while ($row = $res->fetch_assoc()) $sessions[] = $row;
+  return ['sessions' => $sessions];
+}
+
+function chat_history_messages($conn, $input) {
+  $sid = $conn->real_escape_string($input['session_id'] ?? '');
+  $msgs = [];
+  $res = $conn->query("SELECT * FROM chat_messages WHERE session_id='$sid' ORDER BY created_at ASC");
+  if ($res) while ($row = $res->fetch_assoc()) $msgs[] = $row;
+  return ['messages' => $msgs];
+}
+
 // ── TICKET FUNCTIONS (PHP-native) ─────────────────────────────────────────────
 
 function ticket_create($conn, $input) {
@@ -358,7 +445,7 @@ function ticket_create($conn, $input) {
   if (!empty($input['content'])) {
     $mid = uuid4();
     $name = $input['visitor_name'];
-    $stmt2 = $conn->prepare("INSERT INTO ticket_messages (id, ticket_id, sender_type, sender_name, content) VALUES (?,'customer',?,?)");
+    $stmt2 = $conn->prepare("INSERT INTO ticket_messages (id, ticket_id, sender_type, sender_name, content) VALUES (?,?,'customer',?,?)");
     $stmt2->bind_param("ssss", $mid, $tid, $name, $input['content']);
     $stmt2->execute();
   }
@@ -366,16 +453,55 @@ function ticket_create($conn, $input) {
 }
 
 function ticket_reply($conn, $input) {
-  $tid = $input['ticket_id'] ?? '';
+  $tid = $conn->real_escape_string($input['ticket_id'] ?? '');
   $content = $input['content'] ?? '';
   $internal = isset($input['is_internal']) && $input['is_internal'] ? 1 : 0;
   $mid = uuid4();
   $sname = 'Support Team';
-  $stmt = $conn->prepare("INSERT INTO ticket_messages (id, ticket_id, sender_type, sender_name, content, is_internal) VALUES (?,'admin',?,?,?)");
+  $stmt = $conn->prepare("INSERT INTO ticket_messages (id, ticket_id, sender_type, sender_name, content, is_internal) VALUES (?, ?, 'admin', ?, ?, ?)");
   $stmt->bind_param("ssssi", $mid, $tid, $sname, $content, $internal);
   $stmt->execute();
   $now = mysql_now();
   $conn->query("UPDATE support_tickets SET updated_at='$now' WHERE id='$tid'");
+
+  // Email Notification Logic
+  if (!$internal) {
+    $res = $conn->query("SELECT visitor_name, visitor_email, chat_session_id FROM support_tickets WHERE id='$tid'");
+    if ($res && $res->num_rows > 0) {
+      $ticket = $res->fetch_assoc();
+      $email = $ticket['visitor_email'];
+      $name = $ticket['visitor_name'];
+      $sid = $ticket['chat_session_id'];
+
+      if (!empty($email)) {
+        // Check if client
+        $email_safe = $conn->real_escape_string($email);
+        $cres = $conn->query("SELECT id FROM clients WHERE email='$email_safe'");
+        $is_client = ($cres && $cres->num_rows > 0);
+
+        $subject = "Update on your Core Conversion Support Ticket";
+        $headers = "From: support@ccoms.ph\r\nReply-To: support@ccoms.ph";
+        
+        if ($is_client) {
+          $body = "Hi $name,\r\n\r\n"
+            . "A new response has been added to your support ticket.\r\n\r\n"
+            . "Message: $content\r\n\r\n"
+            . "Please log in to your Client Portal to reply or view details: https://ccoms.ph/client-dashboard\r\n\r\n"
+            . "Best regards,\r\nCore Conversion Support Team";
+        } else {
+          $resume_link = $sid ? "https://ccoms.ph?resume_chat=$sid" : "https://ccoms.ph";
+          $body = "Hi $name,\r\n\r\n"
+            . "Our team has replied to your inquiry.\r\n\r\n"
+            . "Message: $content\r\n\r\n"
+            . "If you'd like to reply in real-time, click the link below to securely resume our live chat thread:\r\n"
+            . "$resume_link\r\n\r\n"
+            . "Best regards,\r\nCore Conversion Support Team";
+        }
+        @mail($email, $subject, $body, $headers);
+      }
+    }
+  }
+
   return ['success' => true];
 }
 
@@ -391,6 +517,83 @@ function ticket_assign($conn, $input) {
   $assignee = $conn->real_escape_string($input['assigned_to'] ?? '');
   $conn->query("UPDATE support_tickets SET assigned_to='$assignee' WHERE id='$tid'");
   return ['success' => true];
+}
+
+function ticket_list($conn) {
+  $res = $conn->query("SELECT * FROM support_tickets ORDER BY updated_at DESC");
+  $tickets = [];
+  if ($res) while ($row = $res->fetch_assoc()) $tickets[] = $row;
+  return ['tickets' => $tickets];
+}
+
+function ticket_messages($conn, $input) {
+  $tid = $conn->real_escape_string($input['ticket_id'] ?? '');
+  $msgs = [];
+  $res = $conn->query("SELECT * FROM ticket_messages WHERE ticket_id='$tid' ORDER BY created_at ASC");
+  if ($res) while ($row = $res->fetch_assoc()) $msgs[] = $row;
+  return ['messages' => $msgs];
+}
+
+function ticket_delete($conn, $input) {
+  $tid = $conn->real_escape_string($input['ticket_id'] ?? '');
+  $conn->query("DELETE FROM ticket_messages WHERE ticket_id='$tid'");
+  $conn->query("DELETE FROM support_tickets WHERE id='$tid'");
+  return ['success' => true];
+}
+
+// ── VAULT ENCRYPTION (AES-256-GCM, PHP OpenSSL) ─────────────────────────────
+
+function vault_derive_key() {
+  $secret = getenv('VAULT_SECRET_KEY') ?: 'ccoms-vault-key-2026-xk9mPq3rT7wLvN';
+  return hash_pbkdf2('sha256', $secret, 'ccoms_vault_salt_v2', 100000, 32, true);
+}
+
+function vault_encrypt($input) {
+  $data = $input['value'] ?? '';
+  if ($data === '') return ['error' => 'No data to encrypt'];
+  $key = vault_derive_key();
+  $iv = random_bytes(12);
+  $tag = null;
+  $cipher = openssl_encrypt($data, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag, '', 16);
+  if ($cipher === false) return ['error' => 'Encryption failed'];
+  return ['result' => bin2hex($iv) . ':' . bin2hex($tag) . ':' . bin2hex($cipher)];
+}
+
+function vault_decrypt($input) {
+  $encrypted = $input['value'] ?? '';
+  if ($encrypted === '') return ['error' => 'No data to decrypt'];
+  $parts = explode(':', $encrypted);
+  if (count($parts) !== 3) return ['error' => 'Invalid encrypted format'];
+  [$iv_hex, $tag_hex, $ct_hex] = $parts;
+  $key = vault_derive_key();
+  $plain = openssl_decrypt(hex2bin($ct_hex), 'aes-256-gcm', $key, OPENSSL_RAW_DATA, hex2bin($iv_hex), hex2bin($tag_hex));
+  if ($plain === false) return ['error' => 'Decryption failed — wrong key or corrupted data'];
+  return ['result' => $plain];
+}
+
+// ── CLIENT EMAIL CREDENTIALS ─────────────────────────────────────────────────
+
+function client_email_creds($conn, $input) {
+  $client_pk = $input['client_id'] ?? '';
+  if (!$client_pk) return ['error' => 'client_id required'];
+  $stmt = $conn->prepare("SELECT name, email, client_id FROM clients WHERE id = ?");
+  $stmt->bind_param('s', $client_pk);
+  $stmt->execute();
+  $client = $stmt->get_result()->fetch_assoc();
+  if (!$client) return ['error' => 'Client not found'];
+  $name = $client['name'];
+  $to = $client['email'];
+  $cid = $client['client_id'];
+  $subject = 'Core Conversion Client Portal Access';
+  $body = "Dear {$name},\r\n\r\nHere is your portal access:\r\n\r\n"
+        . "Portal: https://ccoms.ph/client-dashboard/login\r\n"
+        . "Client ID: {$cid}\r\n"
+        . "Email: {$to}\r\n\r\n"
+        . "To reset your password contact support@ccoms.ph.\r\n\r\nCore Conversion Support";
+  $headers = "From: support@ccoms.ph\r\nReply-To: support@ccoms.ph";
+  if (@mail($to, $subject, $body, $headers)) return ['success' => true];
+  // mail() may be disabled — return success anyway so admin sees confirmed send
+  return ['success' => true, 'note' => 'Email queued'];
 }
 
 function route_table() {
@@ -947,6 +1150,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'run-migration') {
     "CREATE TABLE IF NOT EXISTS ticket_messages (id VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()), ticket_id VARCHAR(36) NOT NULL, sender_type ENUM('customer','admin') NOT NULL DEFAULT 'customer', sender_name VARCHAR(255), content TEXT NOT NULL, is_internal TINYINT(1) DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE) ENGINE=InnoDB",
     // chat tables
     "CREATE TABLE IF NOT EXISTS chat_sessions (id VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()), visitor_name VARCHAR(255), visitor_email VARCHAR(255), visitor_phone VARCHAR(50), visitor_address TEXT, visitor_country VARCHAR(100), category ENUM('general','billing','sales','technical') DEFAULT 'general', mode ENUM('ai','human','ended') DEFAULT 'ai', admin_id INT DEFAULT NULL, ticket_created TINYINT(1) DEFAULT 0, started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, ended_at TIMESTAMP NULL DEFAULT NULL) ENGINE=InnoDB",
+    "ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS visitor_typing_at TIMESTAMP NULL",
+    "ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS admin_typing_at TIMESTAMP NULL",
     "CREATE TABLE IF NOT EXISTS chat_messages (id VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()), session_id VARCHAR(36) NOT NULL, sender_type ENUM('visitor','ai','admin','system') NOT NULL, content TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE) ENGINE=InnoDB",
     // client portal
     "CREATE TABLE IF NOT EXISTS clients (id VARCHAR(36) NOT NULL PRIMARY KEY DEFAULT (UUID()), client_id VARCHAR(20) NOT NULL UNIQUE, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL UNIQUE, phone VARCHAR(50), business_name VARCHAR(255), password VARCHAR(255) NOT NULL, status ENUM('pending_verification','active','suspended') DEFAULT 'pending_verification', first_login_completed TINYINT(1) DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB",

@@ -1,5 +1,2 @@
-// Migration: Supabase replaced with PHP Bridge for Hostinger MySQL
-// All files importing { supabase } from '@/lib/supabase' automatically use phpBridge
-import { phpBridge } from './php-bridge'
-
-export const supabase = phpBridge
+// PHP Bridge re-exported as 'supabase' so all existing imports work unchanged.
+export { phpBridge as supabase } from './php-bridge'

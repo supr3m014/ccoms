@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Code, Plus } from 'lucide-react'
-import { useToast } from '@/contexts/ToastContext'
 
 interface Script {
   id: string
@@ -16,7 +15,6 @@ interface Script {
 }
 
 export default function SEOScriptsPage() {
-  const { showToast } = useToast()
   const [scripts, setScripts] = useState<Script[]>([])
   const [loading, setLoading] = useState(true)
   const [headScript, setHeadScript] = useState('')
@@ -94,11 +92,11 @@ export default function SEOScriptsPage() {
         if (error) throw error
       }
 
-      showToast('Scripts saved successfully!', 'success')
+      alert('Scripts saved successfully!')
       fetchScripts()
     } catch (error: any) {
       console.error('Error saving scripts:', error)
-      showToast(error.message || 'Failed to save scripts', 'error')
+      alert(error.message || 'Failed to save scripts')
     }
   }
 

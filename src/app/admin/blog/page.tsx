@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Plus, Edit, Trash2, Eye } from 'lucide-react'
-import { useToast } from '@/contexts/ToastContext'
-import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface BlogPost {
   id: string
@@ -17,8 +15,6 @@ interface BlogPost {
 }
 
 export default function BlogManagement() {
-  const { showToast } = useToast()
-  const { showConfirm } = useConfirm()
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
@@ -46,8 +42,7 @@ export default function BlogManagement() {
   }
 
   async function handleDelete(id: string) {
-    const ok = await showConfirm('Are you sure you want to delete this blog post?', { destructive: true })
-    if (!ok) return
+    if (!confirm('Are you sure you want to delete this blog post?')) return
 
     try {
       const { error } = await supabase.from('blog_posts').delete().eq('id', id)
@@ -55,7 +50,7 @@ export default function BlogManagement() {
       fetchPosts()
     } catch (error) {
       console.error('Error deleting post:', error)
-      showToast('Failed to delete post', 'error')
+      alert('Failed to delete post')
     }
   }
 

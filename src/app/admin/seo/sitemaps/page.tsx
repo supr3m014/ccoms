@@ -2,17 +2,15 @@
 
 import { useState } from 'react'
 import { Download, RefreshCw } from 'lucide-react'
-import { useToast } from '@/contexts/ToastContext'
 
 export default function SitemapsPage() {
-  const { showToast } = useToast()
   const [generating, setGenerating] = useState(false)
 
   const generateSitemap = () => {
     setGenerating(true)
     setTimeout(() => {
       setGenerating(false)
-      showToast('Sitemap generated successfully!', 'success')
+      alert('Sitemap generated successfully!')
     }, 2000)
   }
 
@@ -71,19 +69,34 @@ export default function SitemapsPage() {
         <h3 className="font-semibold text-gray-900 mb-4">Sitemap Settings</h3>
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <input type="checkbox" id="auto-generate" defaultChecked className="rounded" />
+            <input
+              type="checkbox"
+              id="auto-generate"
+              defaultChecked
+              className="rounded"
+            />
             <label htmlFor="auto-generate" className="text-sm text-gray-700">
               Auto-generate sitemap when content is published
             </label>
           </div>
           <div className="flex items-center gap-3">
-            <input type="checkbox" id="include-images" defaultChecked className="rounded" />
+            <input
+              type="checkbox"
+              id="include-images"
+              defaultChecked
+              className="rounded"
+            />
             <label htmlFor="include-images" className="text-sm text-gray-700">
               Include images in sitemap
             </label>
           </div>
           <div className="flex items-center gap-3">
-            <input type="checkbox" id="ping-search-engines" defaultChecked className="rounded" />
+            <input
+              type="checkbox"
+              id="ping-search-engines"
+              defaultChecked
+              className="rounded"
+            />
             <label htmlFor="ping-search-engines" className="text-sm text-gray-700">
               Ping search engines on sitemap update
             </label>

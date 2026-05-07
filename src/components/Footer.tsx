@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Mail, Phone, MapPin, Linkedin, Twitter, Facebook } from 'lucide-react'
+import { Mail, Phone, MapPin, Linkedin, Facebook } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function Footer() {
@@ -18,6 +18,7 @@ export default function Footer() {
   const company = [
     { href: '/about', label: 'About' },
     { href: '/case-studies', label: 'Case Studies' },
+    { href: '/blog', label: 'Blog' },
     { href: '/contact', label: 'Contact' },
   ]
 
@@ -37,9 +38,9 @@ export default function Footer() {
             <p className="text-neutral-400 mb-4">
               Core Conversion Digital Marketing Services - Technical execution that drives measurable growth.
             </p>
-            {/* <div className="flex space-x-4">
+            <div className="flex space-x-4">
               <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/company/ccoms/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-primary-400 transition-colors"
@@ -48,16 +49,7 @@ export default function Footer() {
                 <Linkedin className="w-5 h-5" />
               </a>
               <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-primary-400 transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/ccdms"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-primary-400 transition-colors"
@@ -65,7 +57,7 @@ export default function Footer() {
               >
                 <Facebook className="w-5 h-5" />
               </a>
-            </div> */}
+            </div>
           </motion.div>
 
           <motion.div
@@ -80,7 +72,7 @@ export default function Footer() {
                 <li key={service.href}>
                   <Link
                     href={service.href}
-                    className="text-neutral-300 hover:text-primary-400 transition-colors"
+                    className="hover:text-primary-400 transition-colors"
                   >
                     {service.label}
                   </Link>
@@ -101,7 +93,7 @@ export default function Footer() {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="text-neutral-300 hover:text-primary-400 transition-colors"
+                    className="hover:text-primary-400 transition-colors"
                   >
                     {item.label}
                   </Link>
@@ -120,13 +112,13 @@ export default function Footer() {
             <ul className="space-y-3">
               <li className="flex items-start space-x-3">
                 <Mail className="w-5 h-5 text-primary-400 mt-0.5 flex-shrink-0" />
-                <a href="mailto:hello@ccoms.ph" className="text-neutral-300 hover:text-primary-400 transition-colors">
+                <a href="mailto:hello@ccoms.ph" className="hover:text-primary-400 transition-colors">
                   hello@ccoms.ph
                 </a>
               </li>
               <li className="flex items-start space-x-3">
                 <Phone className="w-5 h-5 text-primary-400 mt-0.5 flex-shrink-0" />
-                <a href="tel:+639922981422" className="text-neutral-300 hover:text-primary-400 transition-colors">
+                <a href="tel:+639922981422" className="hover:text-primary-400 transition-colors">
                   +63 992 298 1422
                 </a>
               </li>
@@ -141,13 +133,13 @@ export default function Footer() {
         <div className="border-t border-neutral-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-neutral-400 text-sm">
-              &copy; {currentYear} Core Conversion Digital Marketing Services. All rights reserved. soothsayerpg
+              &copy; {currentYear} Core Conversion Digital Marketing Services. All rights reserved.
             </p>
             <div className="flex space-x-6 text-sm">
-              <Link href="/privacy" className="text-neutral-300 hover:text-primary-400 transition-colors">
+              <Link href="/privacy" className="hover:text-primary-400 transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-neutral-300 hover:text-primary-400 transition-colors">
+              <Link href="/terms" className="hover:text-primary-400 transition-colors">
                 Terms of Service
               </Link>
             </div>

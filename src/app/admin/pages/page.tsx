@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Edit, Trash2, Eye, FileText } from 'lucide-react'
-import { useToast } from '@/contexts/ToastContext'
-import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface Page {
   id: string
@@ -19,8 +17,6 @@ interface Page {
 }
 
 export default function AllPagesPage() {
-  const { showToast } = useToast()
-  const { showConfirm } = useConfirm()
   const [pages, setPages] = useState<Page[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -46,8 +42,7 @@ export default function AllPagesPage() {
   }
 
   const handleDelete = async (id: string, title: string) => {
-    const ok = await showConfirm(`Are you sure you want to delete "${title}"?`, { destructive: true })
-    if (!ok) return
+    if (!confirm(`Are you sure you want to delete "${title}"?`)) return
 
     try {
       const { error } = await supabase
@@ -59,7 +54,7 @@ export default function AllPagesPage() {
       fetchPages()
     } catch (error) {
       console.error('Error deleting page:', error)
-      showToast('Failed to delete page', 'error')
+      alert('Failed to delete page')
     }
   }
 

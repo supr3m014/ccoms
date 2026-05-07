@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Plus, Trash2, AlertCircle, ArrowRight, Upload, Download } from 'lucide-react'
-import { useToast } from '@/contexts/ToastContext'
-import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface Redirect {
   id: string
@@ -26,8 +24,6 @@ interface Error404 {
 }
 
 export default function RedirectsPage() {
-  const { showToast } = useToast()
-  const { showConfirm } = useConfirm()
   const [activeTab, setActiveTab] = useState<'redirects' | '404' | 'tools'>('redirects')
   const [redirects, setRedirects] = useState<Redirect[]>([])
   const [errors404, setErrors404] = useState<Error404[]>([])
@@ -74,7 +70,7 @@ export default function RedirectsPage() {
     e.preventDefault()
 
     if (!redirectFrom.trim() || !redirectTo.trim()) {
-      showToast('Please fill in all fields', 'warning')
+      alert('Please fill in all fields')
       return
     }
 
@@ -98,7 +94,7 @@ export default function RedirectsPage() {
       fetchData()
     } catch (error: any) {
       console.error('Error creating redirect:', error)
-      showToast(error.message || 'Failed to create redirect', 'error')
+      alert(error.message || 'Failed to create redirect')
     }
   }
 
@@ -117,8 +113,7 @@ export default function RedirectsPage() {
   }
 
   const deleteRedirect = async (id: string) => {
-    const ok = await showConfirm('Delete this redirect?', { destructive: true })
-    if (!ok) return
+    if (!confirm('Delete this redirect?')) return
 
     try {
       const { error } = await supabase
@@ -140,8 +135,7 @@ export default function RedirectsPage() {
   }
 
   const delete404 = async (id: string) => {
-    const ok = await showConfirm('Delete this 404 log?', { destructive: true })
-    if (!ok) return
+    if (!confirm('Delete this 404 log?')) return
 
     try {
       const { error } = await supabase
@@ -157,14 +151,12 @@ export default function RedirectsPage() {
   }
 
   const handleEmptyCache = async () => {
-    const ok = await showConfirm('Empty all cache? This action cannot be undone.', { destructive: true })
-    if (!ok) return
-    showToast('Cache emptied successfully!', 'success')
+    if (!confirm('Empty all cache? This action cannot be undone.')) return
+    alert('Cache emptied successfully!')
   }
 
   const handleDeleteAllRedirects = async () => {
-    const ok = await showConfirm('Delete all redirect rules? This action cannot be undone.', { destructive: true, title: 'Delete All Redirects' })
-    if (!ok) return
+    if (!confirm('Delete all redirect rules? This action cannot be undone.')) return
 
     try {
       const { error } = await supabase
@@ -174,16 +166,16 @@ export default function RedirectsPage() {
 
       if (error) throw error
       fetchData()
-      showToast('All redirects deleted successfully!', 'success')
+      alert('All redirects deleted successfully!')
     } catch (error) {
       console.error('Error deleting redirects:', error)
-      showToast('Failed to delete redirects', 'error')
+      alert('Failed to delete redirects')
     }
   }
 
   const handleImportCSV = async () => {
     if (!importFile) {
-      showToast('Please select a CSV file', 'warning')
+      alert('Please select a CSV file')
       return
     }
 
@@ -235,10 +227,10 @@ export default function RedirectsPage() {
 
         setImportFile(null)
         fetchData()
-        showToast('Redirects imported successfully!', 'success')
+        alert('Redirects imported successfully!')
       } catch (error) {
         console.error('Error importing redirects:', error)
-        showToast('Failed to import redirects', 'error')
+        alert('Failed to import redirects')
       }
     }
     reader.readAsText(importFile)
@@ -269,7 +261,7 @@ export default function RedirectsPage() {
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Error exporting redirects:', error)
-      showToast('Failed to export redirects', 'error')
+      alert('Failed to export redirects')
     }
   }
 

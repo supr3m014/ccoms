@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-// Local auth types replacing @supabase/supabase-js
 interface User {
   id: string | number
   email: string
@@ -31,9 +30,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider')
   return context
 }
 
@@ -43,20 +40,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false)
-      return
-    }
+    supabase.auth.getSession()
+      .then(({ data: { session } }: any) => {
+        setSession(session)
+        setUser(session?.user ?? null)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
 
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
@@ -66,13 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    if (!supabase) {
-      return { error: new Error('Database connection not available') }
-    }
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (!error && data?.user) {
       setUser(data.user)
       setSession({ user: data.user })
@@ -81,17 +67,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    if (!supabase) return
     await supabase.auth.signOut()
+    setUser(null)
+    setSession(null)
   }
 
-  const value = {
-    user,
-    session,
-    loading,
-    signIn,
-    signOut,
-  }
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, session, loading, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }

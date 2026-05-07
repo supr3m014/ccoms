@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MessageSquare, Star, ThumbsUp, Search, Filter } from 'lucide-react'
-import { useToast } from '@/contexts/ToastContext'
-import { useConfirm } from '@/contexts/ConfirmContext'
 
 interface Interaction {
   id: string
@@ -20,8 +18,6 @@ interface Interaction {
 }
 
 export default function InteractionsPage() {
-  const { showToast } = useToast()
-  const { showConfirm } = useConfirm()
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [loading, setLoading] = useState(true)
   const [typeFilter, setTypeFilter] = useState('all')
@@ -74,7 +70,7 @@ export default function InteractionsPage() {
 
   const handleBulkAction = async (action: string) => {
     if (selectedItems.length === 0) {
-      showToast('Please select items first', 'warning')
+      alert('Please select items first')
       return
     }
 
@@ -90,8 +86,7 @@ export default function InteractionsPage() {
           .update({ status: 'trash' })
           .in('id', selectedItems)
       } else if (action === 'delete') {
-        const ok = await showConfirm(`Delete ${selectedItems.length} item(s)?`, { destructive: true })
-        if (!ok) return
+        if (!confirm(`Delete ${selectedItems.length} item(s)?`)) return
         await supabase
           .from('interactions')
           .delete()

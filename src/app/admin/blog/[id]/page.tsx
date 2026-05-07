@@ -1,9 +1,11 @@
-import EditBlogClient from './EditBlogClient'
+import React from 'react'
+import PageContent from './PageContent'
 
-export async function generateStaticParams() {
+export const dynamicParams = false
+export async function generateStaticParams(): Promise<{ id: string }[]> {
   return [{ id: 'new' }]
 }
 
-export default function EditBlogPost() {
-  return <EditBlogClient />
+export default function AdminBlogEditPage(): React.ReactElement {
+  return React.createElement(PageContent)
 }

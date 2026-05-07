@@ -2,199 +2,122 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Plus, Edit2, Trash2, Copy, ArrowLeft, Save, Loader2 } from 'lucide-react'
-import Link from 'next/link'
-import { useToast } from '@/contexts/ToastContext'
-import { useConfirm } from '@/contexts/ConfirmContext'
+import { Plus, Save, Trash2, Zap } from 'lucide-react'
 
-interface Macro {
-  id: string
-  title: string
-  content: string
-  shorthand: string
-}
+interface Macro { id: string; title: string; shorthand: string; content: string; created_at: string }
 
-const SETTINGS_KEY = 'support_macros'
-
-export default function ResponseMacrosPage() {
-  const { showToast } = useToast()
-  const { showConfirm } = useConfirm()
+export default function MacrosPage() {
   const [macros, setMacros] = useState<Macro[]>([])
   const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState<Macro | null>(null)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({ title: '', content: '', shorthand: '' })
-  const [editing, setEditing] = useState<string | null>(null)
-
-  useEffect(() => { fetchMacros() }, [])
+  const [title, setTitle] = useState('')
+  const [shorthand, setShorthand] = useState('')
+  const [content, setContent] = useState('')
 
   const fetchMacros = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', SETTINGS_KEY)
-        .maybeSingle()
+    const { data } = await supabase.from('site_settings').select('*').eq('key', 'chat_macros').maybeSingle()
+    const list: Macro[] = data?.value ? JSON.parse(JSON.stringify(data.value)) : []
+    setMacros(Array.isArray(list) ? list : [])
+    setLoading(false)
+  }
+  useEffect(() => { fetchMacros() }, [])
 
-      if (error) throw error
-
-      if (data?.value) {
-        const list = Array.isArray(data.value) ? data.value : []
-        setMacros(list)
-      } else {
-        // Seed defaults
-        const defaults: Macro[] = [
-          { id: '1', title: 'Thank You for Contacting', shorthand: '/thanks', content: 'Thank you for reaching out to Core Conversion! We appreciate your interest and will get back to you as soon as possible.' },
-          { id: '2', title: 'Demo Request Follow-up', shorthand: '/demo', content: "We'd love to schedule a demo with you. Please let us know your availability and preferred time zone." },
-          { id: '3', title: 'Pricing Inquiry', shorthand: '/pricing', content: 'We offer flexible pricing plans tailored to your business needs. Please contact our sales team for a custom quote.' },
-        ]
-        setMacros(defaults)
-        await persistMacros(defaults)
-      }
-    } catch (e) {
-      console.error('fetchMacros', e)
-    } finally {
-      setLoading(false)
-    }
+  const saveMacros = async (list: Macro[]) => {
+    await supabase.from('site_settings').upsert({ key: 'chat_macros', value: list as any }, { onConflict: 'key' })
   }
 
-  const persistMacros = async (list: Macro[]) => {
-    await supabase
-      .from('site_settings')
-      .upsert({ key: SETTINGS_KEY, value: list }, { onConflict: 'key' })
+  const startNew = () => {
+    setEditing(null); setTitle(''); setShorthand(''); setContent('')
   }
 
-  const handleSave = async () => {
-    if (!form.title.trim() || !form.content.trim() || !form.shorthand.trim()) {
-      showToast('Please fill in all fields', 'warning'); return
-    }
-    setSaving(true)
+  const selectMacro = (m: Macro) => {
+    setEditing(m); setTitle(m.title); setShorthand(m.shorthand); setContent(m.content)
+  }
 
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault(); setSaving(true)
     let updated: Macro[]
     if (editing) {
-      updated = macros.map(m => m.id === editing ? { ...m, ...form } : m)
+      updated = macros.map(m => m.id === editing.id ? { ...m, title, shorthand: shorthand.startsWith('/') ? shorthand : '/' + shorthand, content } : m)
     } else {
-      updated = [...macros, { id: Date.now().toString(), ...form }]
+      const id = Date.now().toString()
+      updated = [...macros, { id, title, shorthand: shorthand.startsWith('/') ? shorthand : '/' + shorthand, content, created_at: new Date().toISOString() }]
     }
-
-    try {
-      await persistMacros(updated)
-      setMacros(updated)
-      setForm({ title: '', content: '', shorthand: '' })
-      setEditing(null)
-      showToast(editing ? 'Macro updated' : 'Macro added', 'success')
-    } catch {
-      showToast('Failed to save macro', 'error')
-    }
+    await saveMacros(updated)
+    setMacros(updated)
+    startNew()
     setSaving(false)
   }
 
-  const handleDelete = async (id: string) => {
-    const ok = await showConfirm('Delete this macro?', { destructive: true })
-    if (!ok) return
+  const deleteMacro = async (id: string) => {
+    if (!confirm('Delete this macro?')) return
     const updated = macros.filter(m => m.id !== id)
-    try {
-      await persistMacros(updated)
-      setMacros(updated)
-    } catch {
-      showToast('Failed to delete', 'error')
-    }
-  }
-
-  const handleEdit = (macro: Macro) => {
-    setForm({ title: macro.title, content: macro.content, shorthand: macro.shorthand })
-    setEditing(macro.id)
-  }
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text)
-    showToast('Copied to clipboard!', 'success')
-  }
-
-  const cancelEdit = () => {
-    setEditing(null)
-    setForm({ title: '', content: '', shorthand: '' })
+    await saveMacros(updated)
+    setMacros(updated)
+    if (editing?.id === id) startNew()
   }
 
   return (
-    <div className="p-8">
-      <Link href="/admin/support" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4">
-        <ArrowLeft className="w-4 h-4" />Back to Support
-      </Link>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Response Macros</h1>
-      <p className="text-gray-600 mb-8">Pre-written reply templates — saved to database</p>
-
-      <div className="grid grid-cols-3 gap-8">
-        {/* Form */}
-        <div className="col-span-1">
-          <div className="bg-white rounded-xl shadow-md p-6 sticky top-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">{editing ? 'Edit Macro' : 'New Macro'}</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
-                <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. Thank You" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Shorthand <span className="text-red-500">*</span></label>
-                <input type="text" value={form.shorthand} onChange={e => setForm(f => ({ ...f, shorthand: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                  placeholder="/thanks" />
-                <p className="text-xs text-gray-400 mt-1">Type this shorthand in chat to insert</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Content <span className="text-red-500">*</span></label>
-                <textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} rows={5}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="Enter the response text..." />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={handleSave} disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {editing ? 'Update' : 'Save Macro'}
-                </button>
-                {editing && (
-                  <button onClick={cancelEdit} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+    <div className="p-6 max-w-4xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Response Macros</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Saved reply templates. Type the shorthand in the chat to insert.</p>
         </div>
+        <button onClick={startNew} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+          <Plus className="w-4 h-4" /> New Macro
+        </button>
+      </div>
 
+      <div className="flex gap-6">
         {/* Macro list */}
-        <div className="col-span-2 space-y-4">
-          {loading ? (
-            <div className="bg-white rounded-xl shadow-md p-12 text-center text-gray-500">Loading macros...</div>
-          ) : macros.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-md p-12 text-center text-gray-500">No macros yet. Create your first one.</div>
-          ) : macros.map(macro => (
-            <div key={macro.id} className="bg-white rounded-xl shadow-md p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-bold text-gray-900">{macro.title}</h3>
-                  <code className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-0.5 inline-block">{macro.shorthand}</code>
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => handleCopy(macro.content)} title="Copy text"
-                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                    <Copy className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleEdit(macro)} title="Edit"
-                    className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleDelete(macro.id)} title="Delete"
-                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+        <div className="w-60 shrink-0 space-y-1">
+          {loading && <p className="text-gray-400 text-sm py-4 text-center">Loading…</p>}
+          {macros.map(m => (
+            <div
+              key={m.id}
+              onClick={() => selectMacro(m)}
+              className={`p-3 rounded-xl cursor-pointer border transition-colors ${editing?.id === m.id ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+            >
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-sm text-gray-900 truncate">{m.title}</p>
+                <button onClick={e => { e.stopPropagation(); deleteMacro(m.id) }} className="p-1 text-red-400 hover:text-red-600 shrink-0">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{macro.content}</p>
+              <p className="text-xs font-mono text-blue-600 mt-0.5">{m.shorthand}</p>
             </div>
           ))}
+          {!loading && macros.length === 0 && <p className="text-gray-400 text-xs text-center py-4">No macros yet</p>}
+        </div>
+
+        {/* Editor */}
+        <div className="flex-1 bg-white border border-gray-200 rounded-xl p-5">
+          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-blue-600" />
+            {editing ? 'Edit Macro' : 'New Macro'}
+          </h3>
+          <form onSubmit={save} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Title</label>
+              <input required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Thank You Reply" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Shorthand <span className="text-gray-400 font-normal">(type this in chat to trigger)</span></label>
+              <input required value={shorthand} onChange={e => setShorthand(e.target.value)} placeholder="/thanks" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Content</label>
+              <textarea required value={content} onChange={e => setContent(e.target.value)} rows={5} placeholder="The full reply text…" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" disabled={saving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-xl text-sm font-semibold">
+                <Save className="w-4 h-4" />{saving ? 'Saving…' : editing ? 'Update Macro' : 'Save Macro'}
+              </button>
+              {editing && <button type="button" onClick={startNew} className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">New</button>}
+            </div>
+          </form>
         </div>
       </div>
     </div>

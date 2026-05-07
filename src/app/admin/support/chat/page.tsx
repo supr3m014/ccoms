@@ -43,6 +43,24 @@ export default function LiveChatHubPage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const selectedSessionData = sessions.find(s => s.id === selectedSession)
+  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
+
+  const bridgeGet = async (params: Record<string, string>) => {
+    const url = new URL(BRIDGE)
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+    const res = await fetch(url.toString(), { credentials: 'include' })
+    return res.json()
+  }
+
+  const bridgePost = async (action: string, body: any) => {
+    const res = await fetch(`${BRIDGE}?action=${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    })
+    return res.json()
+  }
 
   // Load macros on mount
   useEffect(() => {
@@ -70,25 +88,9 @@ export default function LiveChatHubPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
-  const bridgePost = async (action: string, body: any) => {
-    const res = await fetch(`${BRIDGE}?action=${action}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', body: JSON.stringify(body),
-    })
-    return res.json()
-  }
-  const bridgeGet = async (action: string, params: Record<string, string> = {}) => {
-    const url = new URL(BRIDGE)
-    url.searchParams.set('action', action)
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-    const res = await fetch(url.toString(), { credentials: 'include' })
-    return res.json()
-  }
-
   const fetchSessions = async () => {
     try {
-      const data = await bridgeGet('chat-poll', { type: 'admin-sessions' })
+      const data = await bridgeGet({ action: 'chat-poll', type: 'admin-sessions' })
       setSessions(data.sessions || [])
     } catch {}
     setLoading(false)
@@ -96,11 +98,10 @@ export default function LiveChatHubPage() {
 
   const fetchMessages = async (sessionId: string) => {
     try {
-      const data = await bridgeGet('chat-poll', { session_id: sessionId })
+      const data = await bridgeGet({ action: 'chat-poll', session_id: sessionId })
       const incoming: Message[] = data.messages || []
       setMessages(prev => {
         if (incoming.length === prev.length) return prev
-        // Notify if new messages arrived and it's from visitor
         if (incoming.length > lastMsgCount.current && lastMsgCount.current > 0) {
           const newest = incoming[incoming.length - 1]
           if (newest?.sender_type === 'visitor') {
@@ -128,7 +129,9 @@ export default function LiveChatHubPage() {
 
   const handleInputChange = (value: string) => {
     setInput(value)
-    // Detect shorthand: last word starting with /
+    if (selectedSession) {
+      bridgePost('chat-typing', { session_id: selectedSession, type: 'admin' }).catch(() => {})
+    }
     const lastWord = value.split(' ').pop() || ''
     if (lastWord.startsWith('/') && lastWord.length > 1) {
       const match = macros.find(m => m.shorthand.toLowerCase() === lastWord.toLowerCase())

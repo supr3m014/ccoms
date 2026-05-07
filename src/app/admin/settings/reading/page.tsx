@@ -2,17 +2,15 @@
 
 import { useState } from 'react'
 import { Save } from 'lucide-react'
-import { useToast } from '@/contexts/ToastContext'
 
 export default function ReadingSettingsPage() {
-  const { showToast } = useToast()
   const [postsPerPage, setPostsPerPage] = useState('10')
   const [feedItems, setFeedItems] = useState('10')
   const [feedContent, setFeedContent] = useState('summary')
   const [searchVisibility, setSearchVisibility] = useState(true)
 
   const handleSave = () => {
-    showToast('Reading settings saved successfully!', 'success')
+    alert('Reading settings saved successfully!')
   }
 
   return (
