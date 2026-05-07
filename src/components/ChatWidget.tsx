@@ -76,6 +76,7 @@ export default function ChatWidget() {
   const [errors, setErrors] = useState<FormErrors>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [submitAttempted, setSubmitAttempted] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
@@ -87,6 +88,37 @@ export default function ChatWidget() {
   })
 
   const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
+
+  // Detect mobile after mount (avoids SSR mismatch)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Lock body scroll on mobile when chat is open — prevents background bleeding through
+  useEffect(() => {
+    if (!isMobile || step === 'closed') {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      return
+    }
+    const scrollY = window.scrollY
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.top = ''
+      document.body.style.width = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [step, isMobile])
 
   const bridgePost = async (action: string, body: any) => {
     const res = await fetch(`${BRIDGE}?action=${action}`, {
@@ -308,15 +340,20 @@ export default function ChatWidget() {
     )
   }
 
+  // Mobile: full-screen takeover with dvh so keyboard doesn't push content off-screen
+  // Desktop: floating bottom-right widget
+  const containerStyle: React.CSSProperties = isMobile
+    ? { height: '100dvh' }
+    : step === 'form'
+      ? { maxHeight: 'calc(100vh - 48px)' }
+      : { height: '520px' }
+
+  const containerClass = isMobile
+    ? 'fixed inset-0 w-screen z-[9000] flex flex-col bg-white overflow-hidden animate-fadeIn'
+    : 'fixed bottom-6 right-6 z-[9000] flex flex-col bg-white overflow-hidden animate-fadeIn rounded-2xl shadow-2xl w-96 max-w-[calc(100vw-24px)]'
+
   return (
-    <div className={[
-      'fixed z-[9000] flex flex-col bg-white overflow-hidden animate-fadeIn',
-      // Mobile: fullscreen takeover
-      'inset-0',
-      // Desktop sm+: floating widget
-      'sm:inset-auto sm:bottom-6 sm:right-6 sm:w-96 sm:rounded-2xl sm:shadow-2xl sm:max-w-[calc(100vw-24px)]',
-      step === 'form' ? 'sm:h-auto sm:max-h-[calc(100vh-48px)]' : 'sm:h-[520px]',
-    ].join(' ')}>
+    <div className={containerClass} style={containerStyle}>
 
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 flex items-center justify-between shrink-0">
@@ -494,7 +531,10 @@ export default function ChatWidget() {
             )}
             <div ref={messagesEndRef} />
           </div>
-          <div className="p-3 bg-white border-t border-gray-200 flex gap-2 shrink-0">
+          <div
+            className="bg-white border-t border-gray-200 flex gap-2 shrink-0 px-3 pt-3"
+            style={{ paddingBottom: isMobile ? 'max(12px, env(safe-area-inset-bottom))' : '12px' }}
+          >
             <input
               type="text"
               value={input}
