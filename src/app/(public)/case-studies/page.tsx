@@ -402,7 +402,7 @@ const caseStudies: CaseStudy[] = [
     images: [
       '/case-studies/proofs/real-estate-proof-1.png'
     ],
-    externalProofLink: 'https://photos.app.goo.gl/vguFaErhdJdDVSHPA',
+    externalProofLink: 'https://photos.app.goo.gl/iphFUGCQTFqznsMf8',
     objective: '',
     highlights: [],
     technicalSummary: { stack: [], focus: [] },
@@ -424,7 +424,7 @@ const caseStudies: CaseStudy[] = [
     images: [
       '/case-studies/proofs/pharma-proof-1.png'
     ],
-    externalProofLink: 'https://photos.app.goo.gl/Pk3432QorJvexuMB8',
+    externalProofLink: 'https://photos.app.goo.gl/2NzwqW1U47gU3s8R9',
     objective: '',
     highlights: [],
     technicalSummary: { stack: [], focus: [] },
@@ -446,7 +446,7 @@ const caseStudies: CaseStudy[] = [
     images: [
       '/case-studies/proofs/legal-proof-1.png'
     ],
-    externalProofLink: 'https://photos.app.goo.gl/5YiBAQQ9pgYLSuAd9',
+    externalProofLink: 'https://photos.app.goo.gl/rodRcMNNHUktiZnf6',
     objective: '',
     highlights: [],
     technicalSummary: { stack: [], focus: [] },
@@ -468,7 +468,7 @@ const caseStudies: CaseStudy[] = [
     images: [
       '/case-studies/proofs/escorts-proof-1.jpg'
     ],
-    externalProofLink: 'https://photos.app.goo.gl/gAnjpdbexocKxgu27',
+    externalProofLink: 'https://photos.app.goo.gl/D6dAeSumgT8GEx2BA',
     objective: '',
     highlights: [],
     technicalSummary: { stack: [], focus: [] },
