@@ -1,9 +1,9 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState, Fragment } from 'react'
 import { motion, useInView } from 'framer-motion'
 import Link from 'next/link'
-import { Code, CheckCircle2, ArrowRight, Zap, Shield, Layers, Globe, Smartphone, BarChart3 } from 'lucide-react'
+import { Code, CheckCircle2, ArrowRight, Zap, Shield, Layers, Globe, Smartphone, BarChart3, Check, X, Star, ShoppingCart } from 'lucide-react'
 
 function AnimatedSection({ children, className = "" }: { children: React.ReactNode, className?: string }) {
   const ref = useRef(null)
@@ -101,6 +101,122 @@ export default function WebsiteDevelopmentPage() {
     'Ongoing support and maintenance',
     'Performance monitoring'
   ]
+
+  // ── Packages & Pricing ──────────────────────────────────────────────
+  const [pricingTab, setPricingTab] = useState<'core' | 'ecommerce'>('core')
+
+  const coreTiers = [
+    { name: 'Landing Page', price: '₱5,995', badge: '', star: false, promo: '', header: 'bg-gradient-to-br from-slate-600 to-slate-800', solid: 'bg-slate-700 hover:bg-slate-800', highlight: false, highlightBg: '' },
+    { name: 'Starter', price: '₱14,995', badge: '', star: false, promo: '', header: 'bg-gradient-to-br from-blue-500 to-blue-600', solid: 'bg-blue-600 hover:bg-blue-700', highlight: false, highlightBg: '' },
+    { name: 'Professional', price: '₱24,995', badge: 'MOST POPULAR', star: true, promo: '10%', header: 'bg-gradient-to-br from-cyan-400 to-teal-500', solid: 'bg-cyan-500 hover:bg-cyan-600', highlight: true, highlightBg: 'bg-cyan-50/60' },
+    { name: 'Business', price: '₱49,995', badge: 'FULL PACKAGE', star: false, promo: '20%', header: 'bg-gradient-to-br from-purple-600 to-violet-700', solid: 'bg-purple-600 hover:bg-purple-700', highlight: false, highlightBg: '' },
+  ]
+
+  const ecomTiers = [
+    { name: 'E-commerce Basic', price: '₱15,995', badge: '', star: false, promo: '', header: 'bg-gradient-to-br from-emerald-500 to-teal-600', solid: 'bg-emerald-600 hover:bg-emerald-700', highlight: false, highlightBg: '' },
+    { name: 'E-commerce Advanced', price: '₱59,995', badge: 'BEST VALUE', star: true, promo: '', header: 'bg-gradient-to-br from-orange-500 to-red-500', solid: 'bg-orange-500 hover:bg-orange-600', highlight: true, highlightBg: 'bg-orange-50/60' },
+  ]
+
+  const coreSections = [
+    {
+      title: 'Overview',
+      rows: [
+        { label: 'Pages', values: ['1 Page', 'Up to 5', 'Up to 25', 'Up to 50'] },
+        { label: 'Design', values: ['Custom unique layout', 'Template-based', 'Custom unique layouts', 'Fully custom + brand identity'] },
+        { label: 'CMS', values: [false, 'Basic', 'Robust CMS', 'Advanced CMS'] },
+        { label: 'SEO', values: ['Basic on-page', 'Basic on-page', 'Professional on-page', 'Advanced + Search Console'] },
+        { label: 'Custom Logo', values: [false, false, true, true] },
+        { label: 'Blog Setup', values: [false, 'Contact Sales', true, true] },
+      ],
+    },
+    {
+      title: 'Included',
+      rows: [
+        { label: 'Responsive Design', values: [true, true, true, true] },
+        { label: 'SSL Certificate', values: [true, true, true, true] },
+        { label: 'Google Analytics', values: [true, true, true, 'Advanced + Reporting'] },
+        { label: 'Google Maps', values: [false, false, true, true] },
+        { label: 'Newsletter', values: [false, 'Contact Sales', 'Contact Sales', 'By Request'] },
+        { label: 'Live Chat', values: [false, 'Contact Sales', 'Contact Sales', 'By Request'] },
+        { label: 'Third-party Integrations', values: ['By Request', 'By Request', 'Up to 3', 'Up to 5'] },
+        { label: 'Support/Ticketing', values: ['By Request', 'By Request', 'Contact Sales', 'By Request'] },
+      ],
+    },
+    {
+      title: 'Support & Ops',
+      rows: [
+        { label: 'Email Support', values: [true, true, true, true] },
+        { label: 'Priority Support', values: [false, false, true, true] },
+        { label: 'Chat Support', values: [false, false, false, true] },
+        { label: 'Backups', values: ['Monthly', 'Monthly', 'Weekly', 'Weekly + security'] },
+        { label: 'Domain Email', values: ['1 (Free 1 yr)', '5 (Free 1 yr)', '10 (Free 1 yr)', '20 (Free 1 yr)'] },
+      ],
+    },
+    {
+      title: 'Hosting',
+      rows: [
+        { label: 'Hosting', values: ['1 Year', '1 Year', '1 Year', '1 Year + Domain'] },
+        { label: '4 CPU / 4GB RAM / 100GB NVMe + CDN', values: [true, true, true, true] },
+      ],
+    },
+  ]
+
+  const ecomSections = [
+    {
+      title: 'Overview',
+      rows: [
+        { label: 'Products', values: ['< 50 Products', '≥ 200 Products'] },
+        { label: 'Design', values: ['Template-based', 'Custom unique layouts'] },
+        { label: 'CMS', values: ['Basic Admin/User', 'Advanced Admin/User'] },
+        { label: 'SEO', values: ['Basic E-commerce On-Page', 'Advanced E-commerce On-Page'] },
+        { label: 'Custom Logo', values: [false, true] },
+        { label: 'Blog Setup', values: [true, true] },
+      ],
+    },
+    {
+      title: 'Included',
+      rows: [
+        { label: 'Responsive Design', values: [true, true] },
+        { label: 'SSL Certificate', values: [true, true] },
+        { label: 'Google Analytics', values: [true, true] },
+        { label: 'Google Maps', values: [true, true] },
+        { label: 'Newsletter', values: [true, true] },
+        { label: 'Live Chat (Human/AI)', values: ['Contact Sales', true] },
+        { label: 'Third-party Integrations', values: ['Contact Sales', 'Up to 5'] },
+        { label: 'Support/Ticketing', values: ['Contact Sales', 'Robust'] },
+      ],
+    },
+    {
+      title: 'Support & Ops',
+      rows: [
+        { label: 'Email Support', values: [true, true] },
+        { label: 'Priority Support', values: [true, true] },
+        { label: 'Chat Support', values: [false, true] },
+        { label: 'Backups', values: ['Monthly', 'Weekly + security'] },
+        { label: 'Domain Email', values: ['10 (Free 1 yr)', '25 (Free 1 yr)'] },
+      ],
+    },
+    {
+      title: 'Hosting',
+      rows: [
+        { label: 'Hosting', values: ['1 Year + Domain', '1 Year + Domain'] },
+        { label: '4 CPU / 4GB RAM / 100GB NVMe + CDN', values: [true, true] },
+      ],
+    },
+  ]
+
+  const pricingTiers = pricingTab === 'core' ? coreTiers : ecomTiers
+  const pricingSections = pricingTab === 'core' ? coreSections : ecomSections
+  const pricingGrid = pricingTab === 'core'
+    ? 'grid grid-cols-[180px_repeat(4,minmax(0,1fr))]'
+    : 'grid grid-cols-[180px_repeat(2,minmax(0,1fr))]'
+  const pricingMinWidth = pricingTab === 'core' ? 'min-w-[860px]' : 'min-w-[560px]'
+
+  const renderPriceCell = (val: boolean | string) => {
+    if (val === true) return <Check className="w-5 h-5 text-emerald-500" strokeWidth={2.5} />
+    if (val === false) return <X className="w-5 h-5 text-red-400" strokeWidth={2.5} />
+    return <span className="text-sm text-gray-700 font-medium">{val}</span>
+  }
 
   return (
     <div className="relative overflow-hidden">
@@ -300,6 +416,130 @@ export default function WebsiteDevelopmentPage() {
               ))}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Packages & Pricing */}
+      <section className="py-24 bg-slate-50">
+        <div className="container-custom">
+          <AnimatedSection>
+            <h2 className="text-4xl md:text-5xl font-bold mb-3 text-gray-900 text-center">
+              Packages &amp; Pricing
+            </h2>
+            <p className="text-lg text-gray-500 mb-8 text-center">
+              Everything you need to launch, grow, and scale — with no hidden fees.
+            </p>
+
+            {/* Toggle */}
+            <div className="flex justify-center mb-10">
+              <div className="inline-flex items-center gap-1 p-1 bg-white border border-gray-200 rounded-full shadow-sm">
+                <button
+                  onClick={() => setPricingTab('core')}
+                  className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${
+                    pricingTab === 'core'
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Core Packages
+                </button>
+                <button
+                  onClick={() => setPricingTab('ecommerce')}
+                  className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+                    pricingTab === 'ecommerce'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  E-commerce
+                </button>
+              </div>
+            </div>
+
+            {/* Comparison table */}
+            <div className="max-w-6xl mx-auto overflow-x-auto pb-2">
+              <div className={pricingMinWidth}>
+                <div className={`${pricingGrid} bg-white border border-gray-200 rounded-2xl`}>
+                  {/* Header row */}
+                  <div className="flex items-center px-5 pt-10 pb-4">
+                    <span className="text-sm font-medium text-gray-500">Plans</span>
+                  </div>
+                  {pricingTiers.map((tier) => (
+                    <div key={tier.name} className="px-1.5 pt-10 pb-4">
+                      <div className={`${tier.header} rounded-2xl shadow-lg p-4 text-white text-center flex flex-col h-full relative`}>
+                        {tier.promo && (
+                          <div className="absolute -top-2 -right-2 bg-yellow-400 text-gray-900 text-xs font-extrabold px-2.5 py-1 rounded-full shadow-lg ring-2 ring-white rotate-6 animate-pulse">
+                            {tier.promo} OFF
+                          </div>
+                        )}
+                        <div className="h-5 flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-wider opacity-95">
+                          {tier.star && <Star className="w-3 h-3 fill-current" />}
+                          {tier.badge}
+                        </div>
+                        <h3 className="text-base font-bold leading-tight">{tier.name}</h3>
+                        <div className="text-2xl font-extrabold mt-1">{tier.price}</div>
+                        <div className="text-[11px] opacity-80 mb-3">one-time fee</div>
+                        <button className="mt-auto bg-white/20 hover:bg-white/30 text-white text-sm font-semibold py-2 rounded-lg transition-colors">
+                          Get Started
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Feature sections */}
+                  {pricingSections.map((section) => (
+                    <Fragment key={section.title}>
+                      <div className="col-span-full bg-gray-50 px-5 py-2 text-xs font-semibold uppercase tracking-wider text-gray-400 border-y border-gray-100">
+                        {section.title}
+                      </div>
+                      {section.rows.map((row) => (
+                        <Fragment key={row.label}>
+                          <div className="px-5 py-3.5 text-sm text-gray-600 border-b border-gray-100 flex items-center">
+                            {row.label}
+                          </div>
+                          {row.values.map((val, i) => (
+                            <div
+                              key={i}
+                              className={`px-3 py-3.5 border-b border-gray-100 flex items-center justify-center text-center ${
+                                pricingTiers[i].highlight ? pricingTiers[i].highlightBg : ''
+                              }`}
+                            >
+                              {renderPriceCell(val)}
+                            </div>
+                          ))}
+                        </Fragment>
+                      ))}
+                    </Fragment>
+                  ))}
+
+                  {/* Footer button row */}
+                  <div className="px-5 py-5" />
+                  {pricingTiers.map((tier) => (
+                    <div
+                      key={tier.name}
+                      className={`px-3 py-5 flex justify-center ${tier.highlight ? tier.highlightBg : ''}`}
+                    >
+                      <a
+                        href="/contact"
+                        className={`${tier.solid} text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors`}
+                      >
+                        Get Started
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <p className="text-center text-sm text-gray-400 mt-6">
+              All packages include 4 CPU · 4GB RAM · 100GB NVMe SSD · CDN.{' '}
+              <Link href="/contact" className="text-blue-600 font-medium hover:text-cyan-600">
+                Contact us
+              </Link>{' '}
+              for hosting upgrades or custom requirements.
+            </p>
+          </AnimatedSection>
         </div>
       </section>
 
