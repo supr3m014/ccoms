@@ -35,6 +35,7 @@ interface CaseStudy {
     quote: string
   }
   externalProofLink?: string
+  liveUrl?: string
 }
 
 // Enhanced Image Lightbox Modal with Pan & Zoom
@@ -320,6 +321,30 @@ function ImageCarousel({ images, title, onOpenModal }: { images: string[], title
 const caseStudies: CaseStudy[] = [
   // --- WEB DEVELOPMENT CATEGORY ---
   {
+    slug: 'efficient-power-solutions',
+    title: 'Efficient Power Solutions',
+    subtitle: 'From AI Concept to a Page That Sells',
+    category: 'Landing Page Development',
+    type: 'web-dev',
+    images: ['/case-studies/efficientpower-solutions.png'],
+    liveUrl: 'https://efficientpower-solutions.com/',
+    objective: 'Turn a client-supplied, AI-generated ad concept into a fast, production-ready landing page for their Power Efficiency Enhancer campaign — rebuilt to real web standards without losing the original creative vision.',
+    highlights: [
+      { icon: Layout, title: 'AI Concept, Engineered Right', description: 'Re-architected an AI mockup into a clean, standards-compliant layout and produced the real assets the concept was missing.' },
+      { icon: Smartphone, title: 'Flawless on Every Screen', description: 'Pixel-tuned for desktop and mobile so the ad spend converts wherever the traffic lands.' },
+      { icon: Database, title: 'Bonus: Order Dashboard', description: 'A simple backend so the client can track every incoming order in one place.' },
+      { icon: Zap, title: 'Bonus: Instant Order Alerts', description: 'Automated email notifications the moment a new order comes in.' }
+    ],
+    technicalSummary: {
+      stack: ['Next.js', 'Tailwind CSS', 'Order Dashboard', 'Email Automation'],
+      focus: ['Conversion Rate Optimization', 'Mobile-First Build']
+    },
+    quoteContent: {
+      title: 'Entry-Level Package, Premium Execution',
+      quote: '"A landing page is never \'just a landing page\' to us. The client arrived with an ambitious AI-generated concept that, in reality, broke layout standards and relied on assets that didn\'t exist. We rebuilt it the right way, supplied the missing pieces, then went further—adding a lightweight order dashboard and real-time email alerts the brief never asked for. Whether it\'s our most affordable tier or our flagship, the standard never drops: we don\'t just meet expectations, we engineer past them."'
+    }
+  },
+  {
     slug: 'ccoms-revamp',
     title: 'CComs Revamp',
     subtitle: 'The Growth OS Framework',
@@ -600,9 +625,21 @@ export default function CaseStudiesPage() {
                             <span className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-1 block">
                               {study.category}
                             </span>
-                            <h2 className="text-3xl font-bold text-neutral-900 mb-1">
-                              {study.title}
-                            </h2>
+                            {study.liveUrl ? (
+                              <a
+                                href={study.liveUrl}
+                                target="_blank"
+                                rel="nofollow noopener noreferrer"
+                                className="group inline-flex items-center gap-2 mb-1 text-neutral-900 hover:text-blue-600 transition-colors"
+                              >
+                                <h2 className="text-3xl font-bold">{study.title}</h2>
+                                <ExternalLink className="w-5 h-5 text-blue-600 opacity-70 group-hover:opacity-100 transition-opacity" />
+                              </a>
+                            ) : (
+                              <h2 className="text-3xl font-bold text-neutral-900 mb-1">
+                                {study.title}
+                              </h2>
+                            )}
                             <p className="text-xl font-medium text-neutral-500 italic">
                               {study.subtitle}
                             </p>
