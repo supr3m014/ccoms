@@ -436,7 +436,7 @@ export default function Home() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mb-4">
-                <a href="#contact" className="btn bg-white text-blue-600 hover:shadow-2xl hover:scale-105 transition-all duration-300 px-8 py-4 rounded-xl font-semibold text-lg">
+                <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" className="btn bg-white text-blue-600 hover:shadow-2xl hover:scale-105 transition-all duration-300 px-8 py-4 rounded-xl font-semibold text-lg">
                   Book a Discovery Call
                 </a>
                 <CTAButtons />

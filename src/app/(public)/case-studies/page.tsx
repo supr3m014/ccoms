@@ -817,7 +817,7 @@ export default function CaseStudiesPage() {
               We deliver rankings and codebases that move the bottom line. Let's discuss your next project.
             </p>
             <div className="flex justify-center">
-              <a href="https://calendar.app.google/sSZytJFNEdDVeZ8k8" target="_blank" className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+              <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
                 Book a Call
               </a>
             </div>

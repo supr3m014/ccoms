@@ -312,7 +312,7 @@ export default function ServicesPage() {
                 Book a discovery call and we'll identify what's holding you back, what will move the needle fastest, and what a tailored execution plan should look like.
               </p>
 
-              <a href="/contact" className="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+              <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" className="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
                 Book a Discovery Call
               </a>
             </AnimatedSection>

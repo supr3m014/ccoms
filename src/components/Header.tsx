@@ -74,9 +74,9 @@ export default function Header() {
             <Link href="/admin/login" className="text-gray-700 hover:text-blue-600 font-semibold transition-colors">
               Login
             </Link>
-            <Link href="#book-discovery-call" className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 inline-block">
+            <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 inline-block">
               Book a Call
-            </Link>
+            </a>
           </motion.div>
 
           <button
@@ -119,13 +119,15 @@ export default function Header() {
                 >
                   Login
                 </Link>
-                <Link
-                  href="#book-discovery-call"
+                <a
+                  href="https://calendly.com/ccoms/discovery-call"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="btn btn-primary text-center"
                 >
                   Book a Call
-                </Link>
+                </a>
               </div>
             </motion.div>
           )}
