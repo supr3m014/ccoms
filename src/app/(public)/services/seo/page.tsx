@@ -346,7 +346,7 @@ export default function SEOPage() {
             <AnimatedSection>
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 md:p-12 border border-blue-200">
                 <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                  I'm John Paul Carrasco, founder of CCOMS. I've spent 14 years doing hands-on SEO and technical execution—down to code, hosting, domains, DNS, and performance. That technical depth matters because SEO breaks when strategy is separated from implementation.
+                  I'm John Paul Carrasco, founder of CCOMS. I've spent 15 years doing hands-on SEO and technical execution—down to code, hosting, domains, DNS, and performance. That technical depth matters because SEO breaks when strategy is separated from implementation.
                 </p>
                 <p className="text-lg text-gray-700 leading-relaxed mb-6">
                   We're built for long-term partnerships, not one-month churn. Clients stay because execution stays consistent—and results compound.

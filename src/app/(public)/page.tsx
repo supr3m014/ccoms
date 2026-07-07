@@ -176,7 +176,7 @@ export default function Home() {
             <div className="scale-in bg-white/10 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-white/20 shadow-2xl">
               <div className="prose prose-lg prose-invert max-w-none">
                 <p className="text-xl text-white leading-relaxed mb-6">
-                  I'm John Paul Carrasco, founder of CCOMS. I've spent 14 years doing hands-on SEO and technical execution—down to code, performance, tracking, hosting, domains, and DNS. That matters because most "agencies" break down when real technical work is required.
+                  I'm John Paul Carrasco, founder of CCOMS. I've spent 15 years doing hands-on SEO and technical execution—down to code, performance, tracking, hosting, domains, and DNS. That matters because most "agencies" break down when real technical work is required.
                 </p>
                 <p className="text-xl text-white leading-relaxed mb-8">
                   We stay involved, we stay accountable, and we build long-term relationships—because results compound when the same team consistently ships improvements.

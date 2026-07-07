@@ -479,7 +479,7 @@ export default function WebsiteDevelopmentPage() {
                         </div>
                         <h3 className="text-base font-bold leading-tight">{tier.name}</h3>
                         <div className="text-2xl font-extrabold mt-1">{tier.price}</div>
-                        <div className="text-[11px] opacity-80 mb-3">one-time fee</div>
+                        <div className="text-[11px] opacity-80 mb-3">50% DP · 50% on approval</div>
                         <button className="mt-auto bg-white/20 hover:bg-white/30 text-white text-sm font-semibold py-2 rounded-lg transition-colors">
                           Get Started
                         </button>
@@ -533,6 +533,8 @@ export default function WebsiteDevelopmentPage() {
             </div>
 
             <p className="text-center text-sm text-gray-400 mt-6">
+              2-term installment on all packages: 50% downpayment to start · 50% upon completion and your approval.
+              <br />
               All packages include 4 CPU · 4GB RAM · 100GB NVMe SSD · CDN.{' '}
               <Link href="/contact" className="text-blue-600 font-medium hover:text-cyan-600">
                 Contact us
@@ -555,7 +557,7 @@ export default function WebsiteDevelopmentPage() {
                   We don't just build websites—we create digital assets that drive business results. Every line of code is written with performance, security, and maintainability in mind.
                 </p>
                 <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                  Our founder, John Paul Carrasco, has 14 years of hands-on experience in web development and SEO. This technical depth ensures your website isn't just beautiful—it's built to rank, convert, and scale.
+                  Our founder, John Paul Carrasco, has 15 years of hands-on experience in web development and SEO. This technical depth ensures your website isn't just beautiful—it's built to rank, convert, and scale.
                 </p>
                 <Link href="/about" className="inline-flex items-center text-blue-600 font-semibold hover:text-cyan-600 transition-colors text-lg">
                   Learn more about CCOMS <ArrowRight className="ml-2 w-5 h-5" />

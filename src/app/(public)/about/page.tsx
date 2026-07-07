@@ -57,10 +57,10 @@ export default function AboutPage() {
   ]
 
   const timeline = [
-    { year: '2010', title: 'Foundation', desc: 'Started with hands-on SEO and technical execution' },
-    { year: '2015', title: 'Expansion', desc: 'Grew capabilities into full-stack development and creative' },
-    { year: '2020', title: 'Innovation', desc: 'Pioneered AEO/GEO optimization strategies' },
-    { year: '2024', title: 'Today', desc: 'Trusted partner for businesses demanding accountable execution' }
+    { year: '2012', title: 'Foundation', desc: 'Began as a one-person SEO operation built on hands-on technical execution' },
+    { year: '2015', title: 'Expansion', desc: 'Grew into a full brick-and-mortar agency with an 18-person in-house team' },
+    { year: '2019', title: 'Global Scale', desc: 'Chief digital expert for a North American multi-platform system' },
+    { year: '2025', title: 'Today', desc: 'The Core Conversion Model — senior-led, high-conversion growth architecture' }
   ]
 
   return (
@@ -120,7 +120,7 @@ export default function AboutPage() {
               <div className="bg-gradient-to-br from-gray-50 to-blue-50 p-8 md:p-12 rounded-3xl border border-gray-200">
                 <div className="prose prose-lg max-w-none">
                   <p className="text-lg md:text-xl text-gray-700 leading-relaxed mb-6">
-                    I'm <strong className="text-gray-900">John Paul Carrasco</strong>, founder of Core Conversion Digital Marketing Services (CCOMS). I've spent 14 years doing hands-on SEO and technical execution—down to code, performance, tracking, hosting, domains, and DNS.
+                    I'm <strong className="text-gray-900">John Paul Carrasco</strong>, founder of Core Conversion Digital Marketing Services (CCOMS). I've spent 15 years doing hands-on SEO and technical execution—down to code, performance, tracking, hosting, domains, and DNS.
                   </p>
                   <p className="text-lg md:text-xl text-gray-700 leading-relaxed mb-6">
                     That technical depth matters because most "agencies" break down when real technical work is required. They outsource the hard stuff, lose accountability, and deliver half-finished work.
