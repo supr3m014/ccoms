@@ -125,29 +125,29 @@ export default function HeroVariation1() {
 
             <div className="absolute -bottom-6 -right-6 w-full h-full bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl -z-10"></div>
 
-            <div className="absolute top-8 -left-8 bg-white rounded-2xl shadow-xl p-6 max-w-xs">
+            <div className="absolute top-8 -left-4 lg:-left-8 bg-white/40 backdrop-blur-xl rounded-2xl shadow-xl border border-white/60 p-6 max-w-xs">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-green-100/70 backdrop-blur rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-gray-900">+340%</div>
-                  <div className="text-sm text-gray-600">Traffic Growth</div>
+                  <div className="text-sm text-gray-700">Traffic Growth</div>
                 </div>
               </div>
             </div>
 
-            <div className="absolute bottom-8 -right-8 bg-white rounded-2xl shadow-xl p-6 max-w-xs">
+            <div className="absolute bottom-8 -right-4 lg:-right-8 bg-white/40 backdrop-blur-xl rounded-2xl shadow-xl border border-white/60 p-6 max-w-xs">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-blue-100/70 backdrop-blur rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600">Page Load Speed</div>
+                  <div className="text-sm text-gray-700">Page Load Speed</div>
                   <div className="text-2xl font-bold text-gray-900">0.8s</div>
                 </div>
               </div>

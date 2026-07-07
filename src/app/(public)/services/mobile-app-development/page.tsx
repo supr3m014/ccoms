@@ -348,7 +348,7 @@ export default function MobileAppDevelopmentPage() {
                   We build mobile applications with scalable architecture, clean code, and user-centric design. Whether you need a native iOS app, Android app, or cross-platform solution, we deliver apps that users love and businesses rely on.
                 </p>
                 <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                  With 14 years of technical experience, our founder John Paul Carrasco ensures every app is built with performance, security, and maintainability at its core.
+                  With 15 years of technical experience, our founder John Paul Carrasco ensures every app is built with performance, security, and maintainability at its core.
                 </p>
                 <Link href="/about" className="inline-flex items-center text-blue-600 font-semibold hover:text-cyan-600 transition-colors text-lg">
                   Learn more about CCOMS <ArrowRight className="ml-2 w-5 h-5" />

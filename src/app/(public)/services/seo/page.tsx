@@ -181,7 +181,7 @@ export default function SEOPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <a href="/contact" className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+              <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
                 Book a Discovery Call
               </a>
             </motion.div>
@@ -346,7 +346,7 @@ export default function SEOPage() {
             <AnimatedSection>
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 md:p-12 border border-blue-200">
                 <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                  I'm John Paul Carrasco, founder of CCOMS. I've spent 14 years doing hands-on SEO and technical execution—down to code, hosting, domains, DNS, and performance. That technical depth matters because SEO breaks when strategy is separated from implementation.
+                  I'm John Paul Carrasco, founder of CCOMS. I've spent 15 years doing hands-on SEO and technical execution—down to code, hosting, domains, DNS, and performance. That technical depth matters because SEO breaks when strategy is separated from implementation.
                 </p>
                 <p className="text-lg text-gray-700 leading-relaxed mb-6">
                   We're built for long-term partnerships, not one-month churn. Clients stay because execution stays consistent—and results compound.
@@ -406,7 +406,7 @@ export default function SEOPage() {
                 Book a discovery call and we'll map a tailored plan that targets growth you can measure.
               </p>
 
-              <a href="/contact" className="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+              <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" className="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
                 Book a Discovery Call
               </a>
             </AnimatedSection>

@@ -230,7 +230,7 @@ export default function BlogPostPage() {
                     <h3 className="text-2xl font-bold text-gray-900 mb-1">John Paul Carrasco</h3>
                     <p className="text-blue-600 font-semibold mb-3">Founder & SEO Specialist</p>
                     <p className="text-gray-700 leading-relaxed">
-                      With 14 years of hands-on experience in SEO and technical execution, John Paul has helped dozens of businesses achieve sustainable growth through data-driven strategies and meticulous implementation.
+                      With 15 years of hands-on experience in SEO and technical execution, John Paul has helped dozens of businesses achieve sustainable growth through data-driven strategies and meticulous implementation.
                     </p>
                   </div>
                 </div>
