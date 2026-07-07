@@ -303,6 +303,27 @@ const APP_TIERS = [
   },
 ]
 
+const DM_TIERS = [
+  {
+    name: 'Growth Foundation', price: '₱24,995', sub: 'starting · per month', badge: 'MONTHLY PARTNERSHIP', grad: 'from-sky-500 to-cyan-600',
+    desc: 'Ideal for businesses building online visibility.',
+    bullets: ['SEO Foundation', 'Google Business', 'Website improvements', 'Content', 'Tracking', 'Monthly insights'],
+    note: 'Modules are selected based on your business assessment.',
+  },
+  {
+    name: 'Growth Accelerator', price: '₱39,995', sub: 'starting · per month', badge: '★ MOST CHOSEN', grad: 'from-blue-600 to-indigo-600',
+    desc: 'Designed for businesses looking to generate consistent inquiries.',
+    bullets: ['SEO', 'Landing Pages', 'Paid Ads', 'Email', 'Conversion Optimization', 'Performance dashboards'],
+    note: 'Modules selected after discovery.',
+  },
+  {
+    name: 'Market Leadership', price: 'Custom', sub: 'investment · by engagement', badge: 'MARKET DOMINATION', grad: 'from-violet-600 to-purple-800',
+    desc: 'For established businesses ready to dominate their market.',
+    bullets: ['Authority content', 'AI Search', 'Automation', 'Advanced SEO', 'Executive reporting', 'Growth planning', 'Priority implementation'],
+    note: 'Everything is customized around agreed business objectives.',
+  },
+]
+
 /* ═══════════════════════════ Animations ═══════════════════════════ */
 
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.1, delayChildren: 0.55 } } }
@@ -322,7 +343,7 @@ function Presenter({ slide, dark = false }: { slide: number; dark?: boolean }) {
         className={`rounded-full object-cover shadow-lg shrink-0 border-2 ${dark ? 'border-white/70' : 'border-blue-500'} ${side === 'center' ? 'w-24 h-24' : 'w-14 h-14'}`} />
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4, delay: 0.28 }}
-        className={`relative rounded-2xl px-4 py-3 shadow-xl text-sm leading-relaxed border
+        className={`relative rounded-2xl px-4 py-3 shadow-xl text-sm leading-relaxed border text-left
           ${dark ? 'bg-white/95 text-neutral-800 border-white/40' : 'bg-white text-neutral-700 border-neutral-200'}
           ${side === 'right' ? 'rounded-br-none' : side === 'center' ? '' : 'rounded-bl-none'}`}
       >
@@ -347,7 +368,7 @@ function SlideTitle({ kicker, title, sub }: { kicker?: string; title: string; su
 export default function PortfolioPage() {
   const [slide, setSlide] = useState(0)
   const [dept, setDept] = useState('admin')
-  const [tier, setTier] = useState<'core' | 'ecom' | 'apps' | 'meta'>('core')
+  const [tier, setTier] = useState<'core' | 'ecom' | 'apps' | 'dm' | 'meta'>('core')
   const [webCase, setWebCase] = useState<WebCase | null>(null)
   const [proof, setProof] = useState<{ c: SeoCase; i: number } | null>(null)
 
@@ -422,7 +443,7 @@ export default function PortfolioPage() {
             exit={{ opacity: 0, x: -60, scale: 0.98 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
             className={`w-full max-w-6xl h-full rounded-2xl shadow-2xl overflow-y-auto overscroll-contain
-              ${isCover ? 'bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 border border-white/20' : 'bg-white'}`}
+              ${isCover ? 'bg-white/10 backdrop-blur-xl border border-white/25' : 'bg-white'}`}
           >
             <div className="p-6 md:p-10 min-h-full flex flex-col">
 
@@ -564,22 +585,22 @@ export default function PortfolioPage() {
 
               {/* ── 5 · The Team ── */}
               {slide === 5 && (
-                <div onClick={stop}>
+                <div onClick={stop} className="text-center">
                   <Presenter slide={5} />
                   <SlideTitle kicker="Who We Are" title="The Team" sub="18 in-house specialists across five departments." />
-                  <div className="flex flex-wrap gap-2 mb-6">
+                  <div className="flex flex-wrap gap-2 mb-8 justify-center">
                     {TEAM_DEPTS.map(d => (
                       <button key={d.key} onClick={(e) => { e.stopPropagation(); setDept(d.key) }}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${dept === d.key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-neutral-600 hover:bg-slate-200'}`}>
+                        className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-colors ${dept === d.key ? 'bg-blue-600 text-white' : 'bg-slate-100 text-neutral-600 hover:bg-slate-200'}`}>
                         {d.label}
                       </button>
                     ))}
                   </div>
                   <AnimatePresence mode="wait">
                     <motion.div key={dept} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.22 }}
-                      className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl">
+                      className="flex flex-wrap justify-center gap-5 lg:gap-7">
                       {TEAM_DEPTS.find(d => d.key === dept)!.members.map(m => (
-                        <div key={m.slug} className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                        <div key={m.slug} className="w-[calc(50%-0.75rem)] sm:w-48 lg:w-56 bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                           <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
                             <img src={`/portfolio/team/${m.slug}.png`} alt={m.name} loading="lazy" className="w-full h-full object-cover object-center" />
                           </div>
@@ -758,6 +779,10 @@ export default function PortfolioPage() {
                         className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors flex items-center gap-1.5 ${tier === 'apps' ? 'bg-gradient-to-r from-sky-500 to-blue-700 text-white shadow' : 'text-neutral-600'}`}>
                         <Smartphone className="w-4 h-4" /> Mobile Apps
                       </button>
+                      <button onClick={(e) => { e.stopPropagation(); setTier('dm') }}
+                        className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors flex items-center gap-1.5 ${tier === 'dm' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow' : 'text-neutral-600'}`}>
+                        <Layers className="w-4 h-4" /> Digital Marketing
+                      </button>
                       <button onClick={(e) => { e.stopPropagation(); setTier('meta') }}
                         className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors flex items-center gap-1.5 ${tier === 'meta' ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow' : 'text-neutral-600'}`}>
                         <Megaphone className="w-4 h-4" /> Meta Ads
@@ -811,16 +836,30 @@ export default function PortfolioPage() {
                             </div>
                           ))}
                         </div>
-                        <div className="flex flex-wrap items-center justify-center gap-4 mt-5">
-                          <div className="flex items-center gap-3 bg-white border border-neutral-200 rounded-2xl px-4 py-3 shadow-sm">
-                            <img src="/portfolio/qr-visit-ccoms.png" alt="Scan to visit ccoms.ph" className="w-20 h-20 rounded-lg" />
-                            <div className="text-left"><p className="font-bold text-neutral-900 text-sm">Visit ccoms.ph</p><p className="text-xs text-neutral-500">Scan to browse our site</p></div>
+                      </motion.div>
+                    ) : tier === 'dm' ? (
+                      <motion.div key="dm" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.22 }}
+                        className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto">
+                        {DM_TIERS.map(t => (
+                          <div key={t.name} className="relative bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                            <div className={`bg-gradient-to-br ${t.grad} text-white text-center px-4 pt-3.5 pb-3.5`}>
+                              <p className="h-4 text-[9px] font-bold uppercase tracking-widest opacity-90">{t.badge}</p>
+                              <h3 className="font-bold text-sm !text-white">{t.name}</h3>
+                              <p className="text-2xl font-extrabold mt-0.5">{t.price}</p>
+                              <p className="text-[10px] opacity-80">{t.sub}</p>
+                            </div>
+                            <p className="px-4 pt-3 text-xs text-neutral-500 italic text-center">{t.desc}</p>
+                            <div className="px-4 pt-2.5 pb-1 text-left">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Capabilities may include</p>
+                            </div>
+                            <ul className="px-4 pb-3 space-y-1.5 text-xs text-neutral-600 flex-1 text-left">
+                              {t.bullets.map(b => (
+                                <li key={b} className="flex gap-2"><ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{b}</li>
+                              ))}
+                            </ul>
+                            <p className="px-4 py-2.5 bg-slate-50 border-t border-neutral-100 text-[10px] text-neutral-400 text-center">{t.note}</p>
                           </div>
-                          <div className="flex items-center gap-3 bg-white border border-neutral-200 rounded-2xl px-4 py-3 shadow-sm">
-                            <img src="/portfolio/qr-book-call.png" alt="Scan to book a call" className="w-20 h-20 rounded-lg" />
-                            <div className="text-left"><p className="font-bold text-neutral-900 text-sm">Book a Call</p><p className="text-xs text-neutral-500">Scan to schedule a discovery call</p></div>
-                          </div>
-                        </div>
+                        ))}
                       </motion.div>
                     ) : (
                       <motion.div key="meta" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.22 }}
@@ -859,10 +898,12 @@ export default function PortfolioPage() {
                       ? 'Clear offers for businesses at every stage — ask us during your call which fits yours.'
                       : tier === 'apps'
                         ? '2-term installment on all builds: 50% downpayment to start · 50% upon completion and your approval.'
-                        : <>2-term installment: 50% downpayment to start · 50% upon completion and your approval. All web packages include 4 CPU · 4GB RAM · 100GB NVMe SSD · CDN. Full comparison at{' '}
-                          <a href="/services/website-development" target="_blank" onClick={stop} className="text-blue-600 font-semibold hover:underline">
-                            ccoms.ph/services/website-development
-                          </a></>}
+                        : tier === 'dm'
+                          ? 'Capabilities are modular — the final mix is built around your business assessment and agreed objectives.'
+                          : <>2-term installment: 50% downpayment to start · 50% upon completion and your approval. All web packages include 4 CPU · 4GB RAM · 100GB NVMe SSD · CDN. Full comparison at{' '}
+                            <a href="/services/website-development" target="_blank" onClick={stop} className="text-blue-600 font-semibold hover:underline">
+                              ccoms.ph/services/website-development
+                            </a></>}
                   </p>
                 </div>
               )}
@@ -899,6 +940,17 @@ export default function PortfolioPage() {
                         className="flex items-center justify-center gap-2 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold rounded-2xl px-5 py-3.5 transition-colors">
                         <Globe className="w-5 h-5" /> Visit ccoms.ph
                       </motion.a>
+                      <motion.div variants={item} className="flex flex-wrap items-center justify-center gap-4 pt-2">
+                        <a href="/" onClick={stop} className="flex items-center gap-3 bg-slate-50 hover:bg-blue-50 border border-neutral-200 rounded-2xl px-4 py-3 transition-colors">
+                          <img src="/portfolio/qr-visit-ccoms.png" alt="Scan to visit ccoms.ph" className="w-20 h-20 rounded-lg" />
+                          <div className="text-left"><p className="font-bold text-neutral-900 text-sm">Visit ccoms.ph</p><p className="text-xs text-neutral-500">Scan to browse our site</p></div>
+                        </a>
+                        <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" onClick={stop}
+                          className="flex items-center gap-3 bg-slate-50 hover:bg-blue-50 border border-neutral-200 rounded-2xl px-4 py-3 transition-colors">
+                          <img src="/portfolio/qr-book-call.png" alt="Scan to book a call" className="w-20 h-20 rounded-lg" />
+                          <div className="text-left"><p className="font-bold text-neutral-900 text-sm">Book a Call</p><p className="text-xs text-neutral-500">Scan to schedule a discovery call</p></div>
+                        </a>
+                      </motion.div>
                       <motion.p variants={item} className="text-center text-sm text-neutral-400 italic pt-2">
                         Built for long-term partnerships, not quick client turnover.
                       </motion.p>
