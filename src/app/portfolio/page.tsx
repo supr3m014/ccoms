@@ -305,22 +305,25 @@ const APP_TIERS = [
 
 const DM_TIERS = [
   {
-    name: 'Growth Foundation', price: '₱24,995', sub: 'starting · per month', badge: 'MONTHLY PARTNERSHIP', grad: 'from-sky-500 to-cyan-600',
-    desc: 'Ideal for businesses building online visibility.',
-    bullets: ['SEO Foundation', 'Google Business', 'Website improvements', 'Content', 'Tracking', 'Monthly insights'],
-    note: 'Modules are selected based on your business assessment.',
+    name: 'Growth Foundation', price: '₱15,000–25,000', sub: 'typical investment · per month', badge: 'MONTHLY PARTNERSHIP', grad: 'from-sky-500 to-cyan-600',
+    desc: 'Ideal for businesses that need stronger online visibility and credibility.',
+    capLabel: 'Typical capabilities include',
+    bullets: ['SEO Foundation', 'Google Business Profile Optimization', 'Content Strategy', 'Website Improvements', 'Analytics & Tracking', 'Monthly Growth Review'],
+    note: '',
   },
   {
-    name: 'Growth Accelerator', price: '₱39,995', sub: 'starting · per month', badge: '★ MOST CHOSEN', grad: 'from-blue-600 to-indigo-600',
-    desc: 'Designed for businesses looking to generate consistent inquiries.',
-    bullets: ['SEO', 'Landing Pages', 'Paid Ads', 'Email', 'Conversion Optimization', 'Performance dashboards'],
-    note: 'Modules selected after discovery.',
+    name: 'Growth Accelerator', price: '₱30,000–50,000', sub: 'typical investment · per month', badge: '★ MOST CHOSEN', grad: 'from-blue-600 to-indigo-600',
+    desc: 'Ideal for businesses seeking more consistent inquiries and lead generation.',
+    capLabel: 'Capabilities may include',
+    bullets: ['Advanced SEO', 'Paid Advertising', 'Landing Pages', 'Conversion Optimization', 'Email Marketing (when appropriate)', 'AI SEO', 'Growth Reviews & Recommendations'],
+    note: '',
   },
   {
-    name: 'Market Leadership', price: 'Custom', sub: 'investment · by engagement', badge: 'MARKET DOMINATION', grad: 'from-violet-600 to-purple-800',
-    desc: 'For established businesses ready to dominate their market.',
-    bullets: ['Authority content', 'AI Search', 'Automation', 'Advanced SEO', 'Executive reporting', 'Growth planning', 'Priority implementation'],
-    note: 'Everything is customized around agreed business objectives.',
+    name: 'Market Leadership', price: 'Custom', sub: 'custom investment · by engagement', badge: 'MARKET DOMINATION', grad: 'from-violet-600 to-purple-800',
+    desc: 'Designed for businesses seeking long-term digital leadership.',
+    capLabel: 'May include',
+    bullets: ['AI Search Optimization', 'Authority Content', 'Marketing Automation', 'Multi-channel Campaigns', 'Advanced Analytics', 'Executive Growth Reviews', 'Priority Implementation'],
+    note: 'Capabilities are selected based on your business objectives and growth opportunities.',
   },
 ]
 
@@ -764,8 +767,12 @@ export default function PortfolioPage() {
                 <div onClick={stop}>
                   <Presenter slide={10} />
                   <div className="text-center">
-                    <SlideTitle kicker="Our Offer" title="Packages & Pricing"
-                      sub="A condensed look at our engagement options — full feature breakdowns during your call." />
+                    <SlideTitle kicker="Our Offer" title="Packages & Pricing" />
+                    <p className="text-neutral-500 -mt-3 mb-6 max-w-3xl mx-auto text-sm leading-relaxed">
+                      {tier === 'dm'
+                        ? 'Every business has different growth challenges — some need visibility, some need more qualified inquiries, others need to scale an already successful marketing engine. Instead of forcing every business into identical checklists, Core Conversion builds the right combination of digital marketing services based on your objectives, market, competitors, and current digital maturity.'
+                        : 'A condensed look at our engagement options — full feature breakdowns during your call.'}
+                    </p>
                     <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-full mb-7 flex-wrap justify-center">
                       <button onClick={(e) => { e.stopPropagation(); setTier('core') }}
                         className={`px-5 py-2 rounded-full text-sm font-semibold transition-colors ${tier === 'core' ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow' : 'text-neutral-600'}`}>
@@ -845,19 +852,19 @@ export default function PortfolioPage() {
                             <div className={`bg-gradient-to-br ${t.grad} text-white text-center px-4 pt-3.5 pb-3.5`}>
                               <p className="h-4 text-[9px] font-bold uppercase tracking-widest opacity-90">{t.badge}</p>
                               <h3 className="font-bold text-sm !text-white">{t.name}</h3>
-                              <p className="text-2xl font-extrabold mt-0.5">{t.price}</p>
+                              <p className="text-xl font-extrabold mt-0.5 whitespace-nowrap">{t.price}</p>
                               <p className="text-[10px] opacity-80">{t.sub}</p>
                             </div>
                             <p className="px-4 pt-3 text-xs text-neutral-500 italic text-center">{t.desc}</p>
                             <div className="px-4 pt-2.5 pb-1 text-left">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Capabilities may include</p>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">{t.capLabel}</p>
                             </div>
                             <ul className="px-4 pb-3 space-y-1.5 text-xs text-neutral-600 flex-1 text-left">
                               {t.bullets.map(b => (
                                 <li key={b} className="flex gap-2"><ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{b}</li>
                               ))}
                             </ul>
-                            <p className="px-4 py-2.5 bg-slate-50 border-t border-neutral-100 text-[10px] text-neutral-400 text-center">{t.note}</p>
+                            {t.note && <p className="px-4 py-2.5 bg-slate-50 border-t border-neutral-100 text-[10px] text-neutral-400 text-center">{t.note}</p>}
                           </div>
                         ))}
                       </motion.div>
