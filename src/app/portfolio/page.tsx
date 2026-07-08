@@ -947,21 +947,23 @@ export default function PortfolioPage() {
                         className="flex items-center justify-center gap-2 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold rounded-2xl px-5 py-3.5 transition-colors">
                         <Globe className="w-5 h-5" /> Visit ccoms.ph
                       </motion.a>
-                      <motion.div variants={item} className="flex flex-wrap items-center justify-center gap-4 pt-2">
-                        <a href="/" onClick={stop} className="flex items-center gap-3 bg-slate-50 hover:bg-blue-50 border border-neutral-200 rounded-2xl px-4 py-3 transition-colors">
-                          <img src="/portfolio/qr-visit-ccoms.png" alt="Scan to visit ccoms.ph" className="w-20 h-20 rounded-lg" />
-                          <div className="text-left"><p className="font-bold text-neutral-900 text-sm">Visit ccoms.ph</p><p className="text-xs text-neutral-500">Scan to browse our site</p></div>
-                        </a>
-                        <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" onClick={stop}
-                          className="flex items-center gap-3 bg-slate-50 hover:bg-blue-50 border border-neutral-200 rounded-2xl px-4 py-3 transition-colors">
-                          <img src="/portfolio/qr-book-call.png" alt="Scan to book a call" className="w-20 h-20 rounded-lg" />
-                          <div className="text-left"><p className="font-bold text-neutral-900 text-sm">Book a Call</p><p className="text-xs text-neutral-500">Scan to schedule a discovery call</p></div>
-                        </a>
-                      </motion.div>
-                      <motion.p variants={item} className="text-center text-sm text-neutral-400 italic pt-2">
-                        Built for long-term partnerships, not quick client turnover.
-                      </motion.p>
                     </motion.div>
+
+                    <div className="flex flex-row items-stretch justify-center gap-8 md:gap-12 pt-6 flex-wrap">
+                      <a href="/" onClick={stop} className="flex flex-col items-center gap-2 bg-slate-50 hover:bg-blue-50 border border-neutral-200 rounded-2xl px-5 py-4 transition-colors">
+                        <img src="/portfolio/qr-visit-ccoms.png" alt="Scan to visit ccoms.ph" className="w-28 h-28 rounded-lg" />
+                        <div className="text-center"><p className="font-bold text-neutral-900 text-sm">Visit ccoms.ph</p><p className="text-xs text-neutral-500">Scan to browse our site</p></div>
+                      </a>
+                      <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" onClick={stop}
+                        className="flex flex-col items-center gap-2 bg-slate-50 hover:bg-blue-50 border border-neutral-200 rounded-2xl px-5 py-4 transition-colors">
+                        <img src="/portfolio/qr-book-call.png" alt="Scan to book a call" className="w-28 h-28 rounded-lg" />
+                        <div className="text-center"><p className="font-bold text-neutral-900 text-sm">Book a Call</p><p className="text-xs text-neutral-500">Scan to schedule a discovery call</p></div>
+                      </a>
+                    </div>
+
+                    <p className="text-center text-sm text-neutral-400 italic pt-5">
+                      Built for long-term partnerships, not quick client turnover.
+                    </p>
                   </div>
                 </div>
               )}
