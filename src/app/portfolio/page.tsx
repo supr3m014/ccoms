@@ -11,47 +11,50 @@ import {
 /* ═══════════════════════════ Slides ═══════════════════════════ */
 
 const SLIDES = [
-  'Cover', 'Overview', 'About Paul', 'About Us', 'Track Record', 'The Team',
-  'Services', 'Web Dev', 'SEO Results', 'Mobile Apps', 'Our Offers', 'Contact',
+  'Cover', 'Founder', 'Brief', 'Journey', 'About Paul', 'Who We Are', 'Our Impact',
+  'The Team', 'Capabilities', 'Web', 'SEO', 'Mobile Apps', 'Engagement', 'Contact',
 ]
 const TOTAL = SLIDES.length
 
 const SPEECHES = [
-  'Hi, I’m Paul — founder of Core Conversion. Thanks for taking the time. This short deck walks you through who we are, what we’ve built, and the proof behind it.',
-  'Five parts, a few minutes. Click anywhere — or use the arrow keys — and I’ll walk you through it.',
-  'A quick word about me first, so you know who’s actually behind the work.',
-  'CCOMS didn’t start as an agency. It started as one person doing the work — and grew around one principle: delivery before everything else.',
-  'Fourteen years, four eras. Here’s how the operation evolved.',
-  'These are the people who plan, build, and execute — our own in-house team, no outsourcing.',
-  'We don’t sell channels. We solve problems — with whichever of these services the problem actually calls for.',
-  'Enough talk — here’s the work. Tap any project to open the full challenge, solution, and results.',
-  'And here’s what we’ve done in search — real ranking screenshots, real niches, including some of the hardest ones out there.',
-  'We build for mobile too — full client platforms engineered end to end. Here are two: QR Seal, and a point-of-sale system you can actually try right now.',
-  'Here’s how engagements are structured — transparent, with clear installment terms and no hidden charges.',
-  'That’s the portfolio. If what you saw fits what you need, the easiest next step is to book a discovery call — or reach us directly below.',
+  "Hi, I'm Paul, founder of Core Conversion. This interactive presentation will walk you through who we are, what we've built, and how we help businesses grow through technology.",
+  "Before we dive in, a short note on why Core Conversion exists — and the philosophy behind how we work.",
+  "A quick brief: why you're here, who we are, and what makes our approach different.",
+  "In just a few minutes, I'll walk you through who we are, what we've built, and why businesses trust us to help them grow. Use your mouse or arrow keys whenever you're ready.",
+  "A quick introduction before the work speaks for itself, so you know who is leading the strategy behind Core Conversion.",
+  "Core Conversion wasn't built around scaling an agency. It was built around mastering the work first, because execution has always come before expansion.",
+  "Every stage shaped how we build today. Here's the journey behind Core Conversion.",
+  "Behind every project is a real in-house team — planning, building, and improving together.",
+  "Technology is only valuable when it solves the right business problem. That's why every engagement begins with strategy, not services.",
+  "Every project begins with a business challenge. What you'll see isn't just the finished website — it's how strategy, design, and technology came together to solve it.",
+  "Rankings matter — but only when they translate into measurable business growth. Here are a few examples of what's possible with the right strategy.",
+  "Today's customers expect more than a website. These mobile platforms show how custom software can improve customer experience, streamline operations, and create new business opportunities.",
+  "Every business is different. Our engagements are designed around your objectives, priorities, and stage of growth — not fixed packages.",
+  "If our approach aligns with the way you want to grow your business, let's start with a conversation. We'll understand your goals before recommending any solution.",
 ]
 
 const AVATAR_SIDE: ('left' | 'right' | 'center')[] =
-  ['center', 'left', 'right', 'left', 'right', 'left', 'right', 'left', 'right', 'left', 'right', 'center']
+  ['center', 'left', 'right', 'left', 'right', 'left', 'right', 'left', 'right', 'left', 'right', 'left', 'right', 'center']
 
 const NEXT_LABELS = [
-  'Start Presentation', 'Next: About Paul', 'Next: About Us', 'Next: Track Record',
-  'Next: The Team', 'Next: Services', 'Next: Web Dev Cases', 'Next: SEO Results',
-  'Next: Mobile Apps', 'Next: Our Offers', 'Next: Contact', '',
+  'Start Presentation', 'Next: Executive Brief', 'Next: Your Journey', 'Next: About Paul',
+  'Next: Who We Are', 'Next: Our Impact', 'Next: The Team', 'Next: Capabilities',
+  'Next: Our Work', 'Next: SEO Success', 'Next: Mobile Apps', 'Next: Engagement Options',
+  'Next: Contact', '',
 ]
 
 /* ═══════════════════════════ Data ═══════════════════════════ */
 
 const TIMELINE = [
-  { era: '2012 – 2014', text: 'Built on high-intensity technical SEO and the "Clean-Code" development philosophy.' },
-  { era: '2015 – 2018', text: 'Officially founded CCOMS — a full brick-and-mortar agency with a team of 18.' },
-  { era: '2019 – 2024', text: 'Served as chief digital expert for a North American multi-platform system, leading cross-dimensional integration and growth strategies.' },
-  { era: '2025+', text: 'The Core Conversion Model: a senior-led, high-conversion growth architecture built for B2B clients.' },
+  { title: 'Technical Foundations', text: 'Built a deep technical foundation through high-competition SEO and performance-focused web development.' },
+  { title: 'Agency Growth', text: 'Expanded into a full-service agency with an in-house team and multidisciplinary capabilities.' },
+  { title: 'Enterprise Experience', text: 'Applied strategic and technical expertise to enterprise-level platforms, leading integrated digital initiatives across multiple disciplines.' },
+  { title: 'Core Conversion Today', text: 'Focused on building business systems that combine websites, mobile applications, AI, automation, and digital growth into one connected strategy.' },
 ]
 
 const TEAM_DEPTS = [
   {
-    key: 'admin', label: 'Administrative', members: [
+    key: 'admin', label: 'People & Operations', members: [
       { slug: 'carrasco-joylynn', name: 'Joylynn Carrasco', role: 'HR Manager' },
       { slug: 'sequia-rochelle', name: 'Rochelle Sequia', role: 'HR Assistant' },
       { slug: 'alasgas-tanya', name: 'Tanya Alasgas', role: 'HR Assistant' },
@@ -67,7 +70,7 @@ const TEAM_DEPTS = [
     ],
   },
   {
-    key: 'content', label: 'Content', members: [
+    key: 'content', label: 'Creative', members: [
       { slug: 'bodoa-jerome', name: 'Jerome David Bodoa', role: 'Team Lead — Content / Copy' },
       { slug: 'mangerra-venee', name: 'Venee Mangerra', role: 'Content Specialist' },
       { slug: 'garcia-patrick', name: 'Patrick Garcia', role: 'Content Specialist' },
@@ -83,7 +86,7 @@ const TEAM_DEPTS = [
     ],
   },
   {
-    key: 'design', label: 'Design & Operations', members: [
+    key: 'design', label: 'Design Systems', members: [
       { slug: 'santos-kier', name: 'Kier Santos', role: 'Graphics Designer' },
       { slug: 'ochos-ronron', name: 'Ron-ron Ochos', role: 'Liaison Officer' },
     ],
@@ -91,11 +94,11 @@ const TEAM_DEPTS = [
 ]
 
 const SERVICES = [
-  { icon: Code2, title: 'Custom Website Development', desc: 'Credibility, speed, structure, and inquiry generation — engineered, not templated.' },
-  { icon: Search, title: 'SEO / AEO / GEO', desc: 'Technical search dominance across classic Google, answer engines, and AI-assisted discovery.' },
-  { icon: Layers, title: 'Digital Marketing', desc: 'The full spectrum — strategy, content, tracking, and channel execution built around your market.' },
-  { icon: Smartphone, title: 'Mobile App Development', desc: 'Production-grade iOS/Android apps, from architecture to app-store delivery.' },
-  { icon: Megaphone, title: 'Paid Ads Management', desc: 'Google, Facebook / Instagram, TikTok, and LinkedIn — managed for return, not activity.' },
+  { icon: Code2, title: 'Web Experience Engineering', desc: 'High-performance websites designed to establish credibility, generate demand, and support business growth.' },
+  { icon: Search, title: 'SEO / AEO / GEO', desc: "Search visibility engineered for today's search ecosystem — from Google to AI-assisted discovery." },
+  { icon: Layers, title: 'Digital Marketing', desc: 'Integrated growth strategies that combine content, advertising, analytics, and optimization around measurable business outcomes.' },
+  { icon: Smartphone, title: 'Mobile Apps', desc: 'Custom mobile experiences designed to improve customer engagement, streamline operations, and extend your business beyond the browser.' },
+  { icon: Megaphone, title: 'Paid Ads', desc: 'Performance-driven advertising focused on measurable returns — not simply increasing traffic or impressions.' },
 ]
 
 interface WebCase {
@@ -477,36 +480,141 @@ export default function PortfolioPage() {
                     Core Conversion
                   </motion.h1>
                   <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75, duration: 0.5 }}
-                    className="text-xl md:text-2xl font-semibold text-cyan-100 mb-8">
-                    Digital Marketing Services
+                    className="text-xl md:text-2xl font-semibold text-cyan-100 mb-4">
+                    Technology Built Around Growing Businesses
                   </motion.p>
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 0.5 }}
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9, duration: 0.5 }}
+                    className="text-blue-50/90 max-w-2xl mb-8 leading-relaxed text-sm md:text-base">
+                    We design the digital infrastructure behind growing businesses — from high-performing websites and custom
+                    mobile applications to AI-assisted business systems and measurable digital growth strategies.
+                  </motion.p>
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.05, duration: 0.5 }}
                     className="bg-white/10 border border-white/25 rounded-2xl px-6 py-4 backdrop-blur text-sm text-left">
-                    <p className="text-cyan-200 text-xs font-bold uppercase tracking-widest mb-1.5">Prepared by</p>
+                    <p className="text-cyan-200 text-xs font-bold uppercase tracking-widest mb-1.5">Presented By</p>
                     <p className="font-semibold">Core Conversion Digital Marketing Services</p>
                     <p className="text-blue-100">paul@ccoms.ph · (049) 503-4255 · +63 992 298 1422</p>
                   </motion.div>
                 </div>
               )}
 
-              {/* ── 1 · Overview ── */}
+              {/* ── 1 · Letter from the Founder ── */}
               {slide === 1 && (
                 <div>
                   <Presenter slide={1} />
-                  <SlideTitle kicker="Agenda" title="Overview" />
+                  <SlideTitle kicker="A Note To Start" title="Letter from the Founder" />
+                  <div className="max-w-3xl mx-auto w-full space-y-4 text-neutral-600 leading-relaxed text-sm md:text-[15px]">
+                    <p>If you’ve reached this presentation, there’s a good chance you’re evaluating partners—not just vendors.</p>
+                    <p>
+                      Technology has become one of the biggest competitive advantages a business can invest in, but only when it’s
+                      aligned with real business objectives. Too often, companies end up managing disconnected websites, marketing
+                      campaigns, software, and tools that were never designed to work together.
+                    </p>
+                    <p>
+                      <strong className="text-neutral-900">Core Conversion was built around a different philosophy:</strong> understand
+                      the business first, then design the technology around it.
+                    </p>
+                    <p>
+                      The pages that follow aren’t simply examples of our work. They’re examples of how we approach business problems,
+                      make strategic decisions, and build digital systems that help organizations grow.
+                    </p>
+                    <p>
+                      Thank you for taking the time to review our work. I hope by the end you’ll have a clear understanding not only of
+                      what we build—but why we build it that way.
+                    </p>
+                    <div className="flex items-center gap-4 pt-4 mt-2 border-t border-neutral-200">
+                      <img src="/portfolio/paul-avatar.png" alt="John Paul Carrasco" className="w-14 h-14 rounded-full object-cover border border-neutral-200 shrink-0" />
+                      <div>
+                        <p className="font-bold text-neutral-900" style={{ fontFamily: 'Georgia, serif' }}>John Paul Carrasco</p>
+                        <p className="text-sm text-neutral-500">Founder, Core Conversion</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── 2 · Executive Brief ── */}
+              {slide === 2 && (
+                <div>
+                  <Presenter slide={2} />
+                  <SlideTitle kicker="Executive Brief" title="Everything you need to know, up front." />
+                  <div className="grid md:grid-cols-2 gap-4 text-sm leading-relaxed">
+                    <div className="bg-slate-50 border border-neutral-200 rounded-2xl p-5">
+                      <h3 className="font-bold text-neutral-900 mb-1.5">Why You’re Here</h3>
+                      <p className="text-neutral-600">
+                        Whether you’re looking to generate more qualified leads, improve operational efficiency, modernize customer
+                        experiences, or build entirely new digital products, the technology behind those goals should be designed around
+                        your business—not the other way around.
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 border border-neutral-200 rounded-2xl p-5">
+                      <h3 className="font-bold text-neutral-900 mb-1.5">Who We Are</h3>
+                      <p className="text-neutral-600">
+                        Core Conversion is a business technology partner that combines strategy, software development, AI, digital
+                        marketing, and search expertise to help organizations build stronger digital foundations and achieve measurable
+                        growth.
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 border border-neutral-200 rounded-2xl p-5">
+                      <h3 className="font-bold text-neutral-900 mb-1.5">What You’ll See</h3>
+                      <p className="text-neutral-600 mb-2">
+                        This isn’t a collection of services. It’s a walkthrough of how we think, how we work, and the kinds of business
+                        challenges we’ve solved through technology. Inside you’ll find:
+                      </p>
+                      <ul className="space-y-1">
+                        {['The people behind Core Conversion', 'Our philosophy', 'Selected case studies', 'Mobile platforms', 'Search performance', 'Engagement options'].map(b => (
+                          <li key={b} className="flex gap-2 text-neutral-600"><ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{b}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="bg-slate-50 border border-neutral-200 rounded-2xl p-5">
+                      <h3 className="font-bold text-neutral-900 mb-1.5">What Makes Us Different</h3>
+                      <p className="text-neutral-600 mb-2">
+                        Most agencies specialize in one discipline. We integrate multiple disciplines into one cohesive strategy. That means:
+                      </p>
+                      <ul className="space-y-1">
+                        {["Websites aren’t designed in isolation", "SEO isn’t treated as an afterthought", "Mobile apps aren’t disconnected from business operations", 'Every solution is designed to work together'].map(b => (
+                          <li key={b} className="flex gap-2 text-neutral-600"><ArrowRight className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />{b}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white rounded-2xl p-5">
+                      <h3 className="font-bold mb-1.5 !text-white">Our Philosophy</h3>
+                      <p className="text-blue-50">
+                        Technology is not the objective. Business growth is. Every recommendation, design decision, and technical
+                        implementation should contribute toward helping a business operate more effectively, compete more confidently, and
+                        grow more sustainably.
+                      </p>
+                    </div>
+                    <div className="bg-neutral-900 text-white rounded-2xl p-5">
+                      <h3 className="font-bold mb-1.5 !text-white">Before You Continue</h3>
+                      <p className="text-neutral-300">
+                        As you move through this presentation, don’t think about websites, mobile applications, or SEO individually. Instead,
+                        ask one question: <span className="text-white font-semibold">“Does this help my business move forward?”</span> Because
+                        that’s the same question we ask before recommending any solution.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── 3 · Overview / Your Journey ── */}
+              {slide === 3 && (
+                <div>
+                  <Presenter slide={3} />
+                  <SlideTitle kicker="What’s Ahead" title="Your Journey Starts Here" />
                   <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-2xl mx-auto w-full space-y-3">
                     {[
-                      ['Who We Are', 'Paul, the company, the track record, and the team'],
-                      ['Our Services', 'The five disciplines we execute in-house'],
-                      ['Our Proof of Result', 'Web development builds and SEO campaign wins'],
-                      ['Our Offer', 'Transparent packages and pricing'],
-                      ['Contact Information', 'How to reach us'],
+                      ['The People Behind The Work', 'Meet the founder, the company, and the team behind every project.'],
+                      ['How We Help Businesses Grow', 'A clear look at the capabilities we use to build, market, and scale digital assets.'],
+                      ['Proof Over Promises', 'Real projects, measurable wins, and the results behind our work.'],
+                      ['How We Work Together', 'Straightforward options designed around your goals, budget, and stage of growth.'],
+                      ['Let’s Build What’s Next', 'Start the conversation when you’re ready to move your business forward.'],
                     ].map(([t, d], i) => (
-                      <motion.div key={t} variants={item} className="flex items-center gap-4 bg-slate-50 border border-neutral-200 rounded-xl px-5 py-4">
-                        <span className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                      <motion.div key={t} variants={item} className="flex items-baseline gap-4 bg-slate-50 border border-neutral-200 rounded-xl px-5 py-4">
+                        <span className="text-2xl font-bold text-neutral-300 tabular-nums shrink-0 w-6 text-center">{i + 1}</span>
                         <div>
-                          <p className="font-bold text-neutral-900">{t}</p>
-                          <p className="text-sm text-neutral-500">{d}</p>
+                          <p className="font-bold text-lg text-neutral-900 leading-snug">{t}</p>
+                          <p className="text-sm text-neutral-500 mt-0.5">{d}</p>
                         </div>
                       </motion.div>
                     ))}
@@ -514,33 +622,33 @@ export default function PortfolioPage() {
                 </div>
               )}
 
-              {/* ── 2 · About Paul ── */}
-              {slide === 2 && (
+              {/* ── 4 · About Paul ── */}
+              {slide === 4 && (
                 <div>
-                  <Presenter slide={2} />
-                  <SlideTitle kicker="Who We Are" title="About Paul" sub="Founder — strategic & technical lead" />
+                  <Presenter slide={4} />
+                  <SlideTitle kicker="Founder Profile" title="About Paul" sub="Founder — Strategy, Growth & Technical Direction" />
                   <div className="grid lg:grid-cols-3 gap-8 items-start">
                     <div className="lg:col-span-2 space-y-4 text-neutral-600 leading-relaxed">
                       <p>
-                        Paul began his journey in digital marketing in <strong className="text-neutral-900">2011</strong>, learning from the
-                        ground up: SEO, social media, email marketing, content marketing, and local SEO. Along the way he built a deep
-                        technical foundation in web development and backend administration — WordPress and its page builders
-                        (Elementor, Divi, Spectra), plus HTML/CSS, Python, PHP, and JavaScript.
+                        Paul started in digital marketing in <strong className="text-neutral-900">2011</strong>, building his foundation from
+                        the ground up across SEO, content, social media, email marketing, local search, and conversion-focused web
+                        development. Over the years, that foundation expanded into WordPress development, page builders, frontend
+                        implementation, technical troubleshooting, automation, and AI-assisted workflows.
                       </p>
                       <p>
-                        Today, with over <strong className="text-neutral-900">15 years of hands-on experience</strong>, Paul leads Core
-                        Conversion’s strategic and technical direction — now extended into <strong className="text-neutral-900">AI
-                        integration</strong>: workflow automation, data processing, and multi-agentic systems.
+                        Today, with <strong className="text-neutral-900">15+ years of hands-on experience</strong>, Paul leads Core Conversion
+                        with a rare blend of strategic thinking and technical execution. He understands both sides of digital growth: how to
+                        position a business for the market, and how to build the systems that support that growth.
                       </p>
                       <div className="bg-blue-50 border-l-4 border-blue-600 rounded-r-xl px-5 py-4 text-blue-900 font-medium italic">
-                        He is not a manager who oversees people who do the work. He is the person who does the work — and builds the
-                        team around that standard.
+                        Paul does not lead from a distance. He understands the work because he has done the work, and builds the team around
+                        that standard.
                       </div>
                     </div>
                     <div className="space-y-3">
                       <img src="/portfolio/paul-avatar.png" alt="John Paul Carrasco" className="w-40 h-40 rounded-2xl object-cover shadow-xl border border-neutral-200 mx-auto" />
                       <div className="grid grid-cols-2 gap-2">
-                        {[['15+', 'Years Hands-On'], ['2011', 'Started'], ['18', 'Team Built'], ['AI', 'Integrated Ops']].map(([n, l]) => (
+                        {[['15+', 'Years Hands-On'], ['2011', 'Started in Digital'], ['18', 'Team Members'], ['AI', 'Integrated Workflows']].map(([n, l]) => (
                           <div key={l} className="bg-slate-50 border border-neutral-200 rounded-xl p-3 text-center">
                             <div className="text-xl font-bold text-blue-600">{n}</div>
                             <div className="text-[11px] text-neutral-500 font-medium">{l}</div>
@@ -552,31 +660,29 @@ export default function PortfolioPage() {
                 </div>
               )}
 
-              {/* ── 3 · About Us ── */}
-              {slide === 3 && (
+              {/* ── 5 · About Us / Who We Are ── */}
+              {slide === 5 && (
                 <div>
-                  <Presenter slide={3} />
-                  <SlideTitle kicker="Who We Are" title="About Us" sub="Delivery before everything else." />
+                  <Presenter slide={5} />
+                  <SlideTitle kicker="Our Story" title="Who We Are" sub="Built On Execution. Driven By Partnership." />
                   <div className="grid lg:grid-cols-2 gap-8 items-start pb-4">
                     <div className="flex flex-col gap-5 text-neutral-600 text-sm md:text-[15px] leading-relaxed">
                       <p>
-                        Core Conversion began in <strong className="text-neutral-900">2012 as a one-person SEO operation</strong>. By 2015 it
-                        had grown into a full brick-and-mortar agency — a team, a business permit, an office — and has since expanded into
-                        website development, mobile app development, paid ads management, and the full spectrum of digital marketing.
+                        Core Conversion began in <strong className="text-neutral-900">2012 as a one-person SEO operation</strong>. As demand
+                        grew, so did the company—expanding into web development, mobile applications, paid advertising, automation, and
+                        full-scale digital growth strategies.
                       </p>
                       <p>
-                        We are <strong className="text-neutral-900">not a volume agency</strong>. We don’t chase quantity of clients at the
-                        expense of quality of work. We’re an owner-led, hands-on operation — the person running your account knows the
-                        work first-hand, at every level of execution.
+                        We’re intentionally selective about the businesses we work with. We value <strong className="text-neutral-900">long-term
+                        partnerships over high client volume</strong> because consistent execution requires focus—not scale for the sake of scale.
                       </p>
                       <p>
-                        The industry has too many agencies built by businessmen who outsource everything, follow whatever is trending, and
-                        have never personally done the work they’re selling. <strong className="text-neutral-900">We exist as the
-                        alternative to that.</strong>
+                        Our approach is simple: understand the business, build the right solution, execute consistently, and continue improving
+                        long after launch. That’s how lasting partnerships are built.
                       </p>
                       <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 font-medium text-blue-900">
-                        Our goal with every client is a long-term business relationship — not a project, not a transaction, but a
-                        partnership where we grow alongside you.
+                        We don’t measure success by completed projects. We measure it by the businesses that continue growing with us years
+                        after launch.
                       </div>
                     </div>
                     <div>
@@ -587,16 +693,16 @@ export default function PortfolioPage() {
                 </div>
               )}
 
-              {/* ── 4 · Track Record ── */}
-              {slide === 4 && (
+              {/* ── 6 · Track Record / Our Impact ── */}
+              {slide === 6 && (
                 <div>
-                  <Presenter slide={4} />
-                  <SlideTitle kicker="Who We Are" title="14 Years of Technical Expertise" />
+                  <Presenter slide={6} />
+                  <SlideTitle kicker="Our Evolution" title="Built Through Experience. Refined Through Execution." />
                   <motion.div variants={stagger} initial="hidden" animate="visible" className="grid md:grid-cols-4 gap-4 mt-4">
                     {TIMELINE.map((t, i) => (
-                      <motion.div key={t.era} variants={item} className="relative bg-slate-50 border border-neutral-200 rounded-2xl p-5 pt-7">
-                        <span className="absolute -top-3 left-5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">{t.era}</span>
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center mb-3">{i + 1}</div>
+                      <motion.div key={t.title} variants={item} className="relative bg-slate-50 border border-neutral-200 rounded-2xl p-5">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-bold flex items-center justify-center mb-3">{i + 1}</div>
+                        <h3 className="font-bold text-neutral-900 text-sm mb-1.5">{t.title}</h3>
                         <p className="text-sm text-neutral-600 leading-relaxed">{t.text}</p>
                       </motion.div>
                     ))}
@@ -604,11 +710,11 @@ export default function PortfolioPage() {
                 </div>
               )}
 
-              {/* ── 5 · The Team ── */}
-              {slide === 5 && (
+              {/* ── 7 · The Team ── */}
+              {slide === 7 && (
                 <div onClick={stop} className="text-center">
-                  <Presenter slide={5} />
-                  <SlideTitle kicker="Who We Are" title="The Team" sub="18 in-house specialists across five departments." />
+                  <Presenter slide={7} />
+                  <SlideTitle kicker="Our People" title="The Team" sub="A multidisciplinary team working together under one standard of execution." />
                   <div className="flex flex-wrap gap-2 mb-8 justify-center">
                     {TEAM_DEPTS.map(d => (
                       <button key={d.key} onClick={(e) => { e.stopPropagation(); setDept(d.key) }}
@@ -636,11 +742,11 @@ export default function PortfolioPage() {
                 </div>
               )}
 
-              {/* ── 6 · Services ── */}
-              {slide === 6 && (
+              {/* ── 8 · Services / Capabilities ── */}
+              {slide === 8 && (
                 <div>
-                  <Presenter slide={6} />
-                  <SlideTitle kicker="What We Do" title="Our Services" />
+                  <Presenter slide={8} />
+                  <SlideTitle kicker="What We Do" title="Capabilities" sub="The disciplines we combine to design, build, and grow modern businesses." />
                   <motion.div variants={stagger} initial="hidden" animate="visible" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {SERVICES.map(s => (
                       <motion.div key={s.title} variants={item} className="bg-slate-50 border border-neutral-200 rounded-2xl p-5 hover:border-blue-300 hover:bg-blue-50/40 transition-colors">
@@ -655,21 +761,21 @@ export default function PortfolioPage() {
                       <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center mb-3">
                         <Rocket className="w-5 h-5 text-white" />
                       </div>
-                      <h3 className="font-bold mb-1.5 !text-white">Custom Strategy — Mix &amp; Match</h3>
+                      <h3 className="font-bold mb-1.5 !text-white">Built Around Your Business</h3>
                       <p className="text-sm text-blue-50 leading-relaxed">
-                        Need more than one? We blend any of these services into a single custom digital marketing
-                        strategy — built around your market, budget, and goals.
+                        Every business is different. We combine the right capabilities into one strategy designed around your goals—not
+                        predefined packages.
                       </p>
                     </motion.div>
                   </motion.div>
                 </div>
               )}
 
-              {/* ── 7 · Web Dev Cases ── */}
-              {slide === 7 && (
+              {/* ── 9 · Web Dev Cases ── */}
+              {slide === 9 && (
                 <div>
-                  <Presenter slide={7} />
-                  <SlideTitle kicker="Proof of Result" title="Website & Platform Development" sub="Tap any project for the full challenge, solution, and results." />
+                  <Presenter slide={9} />
+                  <SlideTitle kicker="Proof of Execution" title="Web Experiences Built Around Business Goals" sub="Explore how strategy, user experience, and technology came together to solve real business challenges." />
                   <motion.div variants={stagger} initial="hidden" animate="visible" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {WEB_CASES.map(c => (
                       <motion.button
@@ -693,11 +799,11 @@ export default function PortfolioPage() {
                 </div>
               )}
 
-              {/* ── 8 · SEO Cases ── */}
-              {slide === 8 && (
+              {/* ── 10 · SEO Cases ── */}
+              {slide === 10 && (
                 <div>
-                  <Presenter slide={8} />
-                  <SlideTitle kicker="Proof of Result" title="SEO / Digital Marketing" sub="Before → after, with the strategy that made the difference." />
+                  <Presenter slide={10} />
+                  <SlideTitle kicker="Proof of Execution" title="Search Visibility That Drives Business Growth" sub="Real campaigns. Competitive industries. Measurable improvements." />
                   <motion.div variants={stagger} initial="hidden" animate="visible" className="grid md:grid-cols-2 gap-4">
                     {SEO_CASES.map(c => (
                       <motion.div key={c.title} variants={item} onClick={stop} className="bg-slate-50 border border-neutral-200 rounded-2xl p-5 flex flex-col cursor-default">
@@ -735,28 +841,35 @@ export default function PortfolioPage() {
                 </div>
               )}
 
-              {/* ── 9 · Mobile App ── */}
-              {slide === 9 && (
+              {/* ── 11 · Mobile Apps ── */}
+              {slide === 11 && (
                 <div>
-                  <Presenter slide={9} />
-                  <SlideTitle kicker="Proof of Result" title="Mobile App Development" sub="Two client platforms — engineered end to end by CCOMS." />
+                  <Presenter slide={11} />
+                  <SlideTitle kicker="Proof of Execution" title="Business Apps Built Around Real Workflows" sub="Purpose-built applications designed around the way businesses operate—not generic templates." />
 
                   {/* App 1 — QR Seal */}
-                  <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-600">Client · SaaS Platform</span>
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-600">Client · Brand Experience Platform</span>
                   <div className="grid lg:grid-cols-2 gap-8 items-start mt-2">
                     <div className="space-y-4 text-neutral-600 leading-relaxed text-sm">
-                      <h3 className="text-lg font-bold text-neutral-900">QR Seal</h3>
+                      <div>
+                        <h3 className="text-lg font-bold text-neutral-900">QR Seal</h3>
+                        <p className="text-xs text-neutral-400 italic mt-0.5">The last neglected touchpoint in a brand’s customer experience.</p>
+                      </div>
                       <p>
-                        The QR Seal mobile app is the "Key" in the QR Seal ecosystem — a native companion to the web "Vault." It generates
-                        dynamic, brand-styled QR codes in seconds, with full analytics (countries, devices, scan history), premium templates,
-                        and SVG/PDF export.
+                        QR Seal is a brand-first QR platform built for businesses that care about every customer interaction. Instead of
+                        treating QR codes as generic black-and-white utilities, QR Seal helps companies turn them into branded, editable,
+                        trackable customer touchpoints that feel intentional and unmistakably part of the business.
+                      </p>
+                      <p>
+                        It gives brands control over where each scan leads, how each interaction performs, and how their QR presence fits
+                        into the overall customer experience.
                       </p>
                       <motion.div variants={stagger} initial="hidden" animate="visible" className="grid grid-cols-2 gap-3">
                         {[
-                          ['Dynamic QR engine', 'Edit destinations anytime — codes never expire'],
-                          ['Full analytics', 'Countries, devices, and scan history per code'],
-                          ['AI-branded designs', 'Logos, gradients, shapes & premium templates'],
-                          ['Subscription platform', 'Free trial, tiered plans, lifetime option'],
+                          ['Branded QR Touchpoints', 'Create QR codes that feel aligned with the business, not disconnected from it.'],
+                          ['Editable After Printing', 'Update destinations anytime without reprinting menus, signs, packaging, or campaigns.'],
+                          ['Scan Intelligence', 'Track scans, locations, devices, and customer interaction history per code.'],
+                          ['Brand-Controlled Platform', 'Manage campaigns, templates, exports, and subscriptions from one clean dashboard.'],
                         ].map(([h, d]) => (
                           <motion.div key={h} variants={item} className="bg-slate-50 border border-neutral-200 rounded-xl p-3.5">
                             <p className="font-bold text-neutral-900 text-xs mb-0.5">{h}</p>
@@ -775,8 +888,8 @@ export default function PortfolioPage() {
                       <div className="flex items-center gap-4 bg-slate-50 border border-neutral-200 rounded-2xl px-5 py-4">
                         <img src="/portfolio/apps/qrseal-demo-qr.png" alt="Scan to view the QR Seal demo" className="w-24 h-24 rounded-lg" />
                         <div>
-                          <p className="font-bold text-neutral-900 text-sm">Try it yourself</p>
-                          <p className="text-xs text-neutral-500 leading-relaxed">Scan the QR code with your phone<br />to view the live demo.</p>
+                          <p className="font-bold text-neutral-900 text-sm">Scan the seal</p>
+                          <p className="text-xs text-neutral-500 leading-relaxed">Use your phone to preview how a QR Seal<br />experience feels from the customer side.</p>
                         </div>
                       </div>
                     </div>
@@ -840,16 +953,16 @@ export default function PortfolioPage() {
                 </div>
               )}
 
-              {/* ── 10 · Our Offer ── */}
-              {slide === 10 && (
+              {/* ── 12 · Our Offers / Engagement Options ── */}
+              {slide === 12 && (
                 <div onClick={stop}>
-                  <Presenter slide={10} />
+                  <Presenter slide={12} />
                   <div className="text-center">
-                    <SlideTitle kicker="Our Offers" title="Packages & Pricing" />
+                    <SlideTitle kicker="How We Work Together" title="Engagement Options" />
                     <p className="text-neutral-500 -mt-3 mb-6 max-w-3xl mx-auto text-sm leading-relaxed">
                       {tier === 'dm'
                         ? 'Every business has different growth challenges — some need visibility, some need more qualified inquiries, others need to scale an already successful marketing engine. Instead of forcing every business into identical checklists, Core Conversion builds the right combination of digital marketing services based on your objectives, market, competitors, and current digital maturity.'
-                        : 'A condensed look at our engagement options — full feature breakdowns during your call.'}
+                        : 'Flexible ways to work together, with transparent pricing and clearly defined deliverables.'}
                     </p>
                     <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-full mb-7 flex-wrap justify-center">
                       <button onClick={(e) => { e.stopPropagation(); setTier('core') }}
@@ -993,10 +1106,10 @@ export default function PortfolioPage() {
                 </div>
               )}
 
-              {/* ── 11 · Contact ── */}
-              {slide === 11 && (
+              {/* ── 13 · Contact ── */}
+              {slide === 13 && (
                 <div className="flex-1 flex flex-col">
-                  <Presenter slide={11} />
+                  <Presenter slide={13} />
                   <div className="flex-1 flex flex-col items-center justify-center">
                     <SlideTitle kicker="Contact Information" title="Get In Touch" />
                     <motion.div variants={stagger} initial="hidden" animate="visible" className="w-full max-w-md space-y-3">
