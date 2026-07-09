@@ -5,14 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, X, ChevronLeft, ChevronRight, ExternalLink, ArrowRight, Globe,
   Code2, Megaphone, Layers, Smartphone, Mail, Phone, ShieldCheck, Zap,
-  Rocket, Users, BarChart3, ShoppingCart, Star, Quote, FileDown
+  Rocket, Users, BarChart3, ShoppingCart, Star, Quote, FileDown, Sparkles, Package
 } from 'lucide-react'
 
 /* ═══════════════════════════ Slides ═══════════════════════════ */
 
 const SLIDES = [
   'Cover', 'Overview', 'About Paul', 'About Us', 'Track Record', 'The Team',
-  'Services', 'Web Dev', 'SEO Results', 'Mobile App', 'Our Offer', 'Contact',
+  'Services', 'Web Dev', 'SEO Results', 'Mobile Apps', 'Our Offers', 'Contact',
 ]
 const TOTAL = SLIDES.length
 
@@ -26,8 +26,8 @@ const SPEECHES = [
   'We don’t sell channels. We solve problems — with whichever of these services the problem actually calls for.',
   'Enough talk — here’s the work. Tap any project to open the full challenge, solution, and results.',
   'And here’s what we’ve done in search — real ranking screenshots, real niches, including some of the hardest ones out there.',
-  'We build for mobile too. QR Seal is a client platform we engineered end to end — SaaS web app, mobile app, and the AI engine behind it.',
-  'Here’s how engagements are structured. Transparent, one-time fees — no hidden charges.',
+  'We build for mobile too — full client platforms engineered end to end. Here are two: QR Seal, and a point-of-sale system you can actually try right now.',
+  'Here’s how engagements are structured — transparent, with clear installment terms and no hidden charges.',
   'That’s the portfolio. If what you saw fits what you need, the easiest next step is to book a discovery call — or reach us directly below.',
 ]
 
@@ -37,7 +37,7 @@ const AVATAR_SIDE: ('left' | 'right' | 'center')[] =
 const NEXT_LABELS = [
   'Start Presentation', 'Next: About Paul', 'Next: About Us', 'Next: Track Record',
   'Next: The Team', 'Next: Services', 'Next: Web Dev Cases', 'Next: SEO Results',
-  'Next: Mobile App', 'Next: Our Offer', 'Next: Contact', '',
+  'Next: Mobile Apps', 'Next: Our Offers', 'Next: Contact', '',
 ]
 
 /* ═══════════════════════════ Data ═══════════════════════════ */
@@ -301,6 +301,24 @@ const APP_TIERS = [
     chips: ['After Launch'],
     bullets: ['Updates + OS-compatibility fixes', 'Monitoring', 'Minor changes', 'Perfect as an add-on after launch'],
   },
+]
+
+const POS_SHOTS = [
+  { src: '/portfolio/apps/pos-01.jpg', cap: 'Staff sign-in' },
+  { src: '/portfolio/apps/pos-02.jpg', cap: 'Register' },
+  { src: '/portfolio/apps/pos-03.jpg', cap: 'Item options' },
+  { src: '/portfolio/apps/pos-04.jpg', cap: 'Inventory' },
+]
+const POS_PILLARS = [
+  { icon: Zap, title: 'Faster Checkout', desc: 'Every interaction is designed to reduce friction at the counter.' },
+  { icon: Layers, title: 'Smarter Operations', desc: 'Monitor inventory, staff, and sales from one unified platform.' },
+  { icon: BarChart3, title: 'Better Decisions', desc: 'Transform daily transactions into actionable business insights.' },
+  { icon: Rocket, title: 'Built To Scale', desc: 'Designed for businesses today, adaptable for the business you become tomorrow.' },
+]
+const POS_SCENES = [
+  { icon: Package, h: 'Know What’s Moving. Before It Runs Out.', d: 'Stay ahead of demand with inventory visibility designed to keep operations running without interruption.' },
+  { icon: Zap, h: 'Speed Creates Better Customer Experiences.', d: 'Streamlined workflows reduce waiting time, helping staff serve customers quickly and confidently.' },
+  { icon: Sparkles, h: 'Meet Your Business Copilot.', d: 'CCOMS AI analyzes operational data, answers business questions, and recommends smarter decisions — helping owners spend less time managing and more time growing.' },
 ]
 
 const DM_TIERS = [
@@ -721,9 +739,13 @@ export default function PortfolioPage() {
               {slide === 9 && (
                 <div>
                   <Presenter slide={9} />
-                  <SlideTitle kicker="Proof of Result" title="Mobile App Development" sub="QR Seal — a client SaaS platform engineered end to end by CCOMS." />
-                  <div className="grid lg:grid-cols-2 gap-8 items-start">
+                  <SlideTitle kicker="Proof of Result" title="Mobile App Development" sub="Two client platforms — engineered end to end by CCOMS." />
+
+                  {/* App 1 — QR Seal */}
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-600">Client · SaaS Platform</span>
+                  <div className="grid lg:grid-cols-2 gap-8 items-start mt-2">
                     <div className="space-y-4 text-neutral-600 leading-relaxed text-sm">
+                      <h3 className="text-lg font-bold text-neutral-900">QR Seal</h3>
                       <p>
                         The QR Seal mobile app is the "Key" in the QR Seal ecosystem — a native companion to the web "Vault." It generates
                         dynamic, brand-styled QR codes in seconds, with full analytics (countries, devices, scan history), premium templates,
@@ -747,7 +769,7 @@ export default function PortfolioPage() {
                       <div className="flex gap-3 justify-center">
                         {['qrseal-app-1.png', 'qrseal-app-2.png', 'qrseal-app-3.png'].map(f => (
                           <img key={f} src={`/portfolio/apps/${f}`} alt="QR Seal app screen" loading="lazy"
-                            className="w-28 md:w-36 rounded-2xl shadow-xl border border-neutral-200" />
+                            className="w-24 md:w-32 rounded-2xl shadow-xl border border-neutral-200" />
                         ))}
                       </div>
                       <div className="flex items-center gap-4 bg-slate-50 border border-neutral-200 rounded-2xl px-5 py-4">
@@ -759,6 +781,62 @@ export default function PortfolioPage() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="border-t border-neutral-200 my-9" />
+
+                  {/* App 2 — CCOMS POS */}
+                  <div onClick={stop} className="text-center">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-600">Client · Point-of-Sale Platform</span>
+                    <h3 className="text-2xl lg:text-3xl font-bold text-neutral-900 mt-1">Run Your Business. Not Just Your Register.</h3>
+                    <p className="text-neutral-500 max-w-3xl mx-auto mt-2 text-sm leading-relaxed">
+                      A modern point-of-sale platform designed to simplify operations, empower staff, and give owners complete visibility
+                      into their business — optimized for both mobile and tablet, so staff get a consistent experience wherever business happens.
+                    </p>
+
+                    <div className="flex flex-wrap justify-center gap-3 mt-6">
+                      {POS_SHOTS.map(s => (
+                        <div key={s.src} className="flex flex-col items-center gap-1.5">
+                          <img src={s.src} alt={s.cap} loading="lazy" className="w-24 md:w-28 rounded-2xl shadow-xl border border-neutral-200" />
+                          <span className="text-[10px] font-semibold text-neutral-400">{s.cap}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="inline-flex items-center gap-4 bg-slate-50 border border-neutral-200 rounded-2xl px-5 py-4 mt-6">
+                      <img src="/portfolio/apps/pos-demo-qr.png" alt="Scan to try the POS demo" className="w-24 h-24 rounded-lg" />
+                      <div className="text-left">
+                        <p className="font-bold text-neutral-900 text-sm">Try the live demo</p>
+                        <p className="text-xs text-neutral-500 leading-relaxed">Scan with your phone to open the<br />interactive POS mock (staff PIN: 1234).</p>
+                      </div>
+                    </div>
+
+                    <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-7 text-left">
+                      {POS_PILLARS.map(p => (
+                        <motion.div key={p.title} variants={item} className="bg-slate-50 border border-neutral-200 rounded-xl p-4">
+                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mb-2.5"><p.icon className="w-5 h-5 text-white" /></div>
+                          <p className="font-bold text-neutral-900 text-sm mb-0.5">{p.title}</p>
+                          <p className="text-xs text-neutral-500 leading-relaxed">{p.desc}</p>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+
+                    <div className="grid sm:grid-cols-3 gap-3 mt-5 text-left">
+                      {POS_SCENES.map(sc => (
+                        <div key={sc.h} className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm">
+                          <sc.icon className="w-5 h-5 text-emerald-600 mb-2" />
+                          <p className="font-bold text-neutral-900 text-sm leading-snug mb-1">{sc.h}</p>
+                          <p className="text-xs text-neutral-500 leading-relaxed">{sc.d}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6 bg-gradient-to-r from-emerald-600 to-teal-500 text-white rounded-2xl p-5">
+                      <p className="font-bold text-base">Technology That Works Behind Every Great Business.</p>
+                      <p className="text-sm text-emerald-50 mt-1 max-w-2xl mx-auto">
+                        Because the right software shouldn’t just process transactions. It should help build a better business.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -767,7 +845,7 @@ export default function PortfolioPage() {
                 <div onClick={stop}>
                   <Presenter slide={10} />
                   <div className="text-center">
-                    <SlideTitle kicker="Our Offer" title="Packages & Pricing" />
+                    <SlideTitle kicker="Our Offers" title="Packages & Pricing" />
                     <p className="text-neutral-500 -mt-3 mb-6 max-w-3xl mx-auto text-sm leading-relaxed">
                       {tier === 'dm'
                         ? 'Every business has different growth challenges — some need visibility, some need more qualified inquiries, others need to scale an already successful marketing engine. Instead of forcing every business into identical checklists, Core Conversion builds the right combination of digital marketing services based on your objectives, market, competitors, and current digital maturity.'
