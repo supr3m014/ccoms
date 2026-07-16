@@ -58,6 +58,61 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // ── Support section ──────────────────────────────────────────────────
+    // Live chat uses a capability model: the session ID is an unguessable
+    // random document ID handed to the visitor by the chatStart Cloud
+    // Function. Knowing the ID = owning the session (same idea as a private
+    // link). Listing all sessions stays admin-only.
+    match /chat_sessions/{sid} {
+      allow get: if true;               // visitor re-opens their own session by ID
+      allow list: if isAdmin();
+      allow create: if false;           // only the chatStart Cloud Function
+      allow delete: if isAdmin();
+
+      // Visitors may only touch their typing timestamp, end the chat, or
+      // request a ticket — never rewrite identity fields or reopen a chat.
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['visitor_typing_at', 'mode', 'ended_at', 'ticket_created']) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['mode'])
+          || request.resource.data.mode == 'ended') &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['ticket_created'])
+          || request.resource.data.ticket_created == true)
+      );
+
+      match /messages/{mid} {
+        allow read: if true;            // scoped by the secret session ID
+        allow create: if isAdmin() || (
+          request.resource.data.sender_type == 'visitor' &&
+          request.resource.data.content is string &&
+          request.resource.data.content.size() > 0 &&
+          request.resource.data.content.size() <= 4000 &&
+          get(/databases/$(database)/documents/chat_sessions/$(sid)).data.mode != 'ended'
+        );
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Tickets are back-office only. Created by admins or by the
+    // ticket-from-chat Cloud Function (Admin SDK bypasses rules).
+    match /tickets/{tid} {
+      allow read, write: if isAdmin();
+      match /messages/{mid} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // Contact form submissions arrive via the submitContact Cloud Function.
+    match /contact_submissions/{id} {
+      allow read, update, delete: if isAdmin();
+      allow create: if false;
+    }
+
+    // Support settings (response macros).
+    match /support_config/{id} {
+      allow read, write: if isAdmin();
+    }
+
     // Default deny for anything else.
     match /{document=**} {
       allow read, write: if false;

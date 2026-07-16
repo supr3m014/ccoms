@@ -1,132 +1,81 @@
 'use client'
 
+// Live Chat Hub — Firestore-backed, fully realtime (onSnapshot; the old
+// bridge version polled every 3–5s). Visitor messages appear instantly and
+// AI replies are written by the onChatMessageCreated Cloud Function.
+
 import { useState, useEffect, useRef } from 'react'
-import { MessageCircle, User, Bot, Send, UserCheck, Clock, RefreshCw } from 'lucide-react'
+import {
+  collection, doc, query, orderBy, onSnapshot, addDoc, updateDoc, getDoc,
+  serverTimestamp,
+} from 'firebase/firestore'
+import { getDb } from '@/lib/firebase'
+import { MACROS_DOC, fmtTime, type ChatSessionDoc, type ChatMessageDoc, type Macro } from '@/lib/support'
+import { MessageCircle, User, Bot, Send, UserCheck, Clock } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
-import { supabase } from '@/lib/supabase'
-
-interface Macro { id: string; title: string; content: string; shorthand: string }
-
-interface Session {
-  id: string
-  visitor_name: string
-  visitor_email: string
-  visitor_phone: string
-  visitor_country: string
-  category: string
-  mode: 'ai' | 'human' | 'ended'
-  started_at: string
-  last_message_sender?: string
-  last_message_at?: string
-}
-
-interface Message {
-  id: string
-  session_id: string
-  sender_type: 'visitor' | 'ai' | 'admin' | 'system'
-  content: string
-  created_at: string
-}
 
 export default function LiveChatHubPage() {
   const { showToast } = useToast()
-  const [sessions, setSessions] = useState<Session[]>([])
+  const [sessions, setSessions] = useState<ChatSessionDoc[]>([])
   const [selectedSession, setSelectedSession] = useState<string | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<ChatMessageDoc[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [macros, setMacros] = useState<Macro[]>([])
   const [macroChip, setMacroChip] = useState<Macro | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const sessionPollRef = useRef<NodeJS.Timeout | null>(null)
-  const msgPollRef = useRef<NodeJS.Timeout | null>(null)
-  const lastMsgCount = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const typingThrottleRef = useRef<number>(0)
   // Track when admin last viewed each session (sessionId → timestamp ms)
   const viewedAt = useRef<Map<string, number>>(new Map())
 
-  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
-
-  const bridgeGet = async (params: Record<string, string>) => {
-    const url = new URL(BRIDGE)
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-    const res = await fetch(url.toString(), { credentials: 'include' })
-    return res.json()
-  }
-
-  const bridgePost = async (action: string, body: any) => {
-    const res = await fetch(`${BRIDGE}?action=${action}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(body),
-    })
-    return res.json()
-  }
-
-  const isUnread = (s: Session): boolean => {
-    if (s.last_message_sender !== 'visitor') return false
-    if (!s.last_message_at) return false
-    const lastMsg = new Date(s.last_message_at.endsWith('Z') ? s.last_message_at : s.last_message_at + 'Z').getTime()
-    const seen = viewedAt.current.get(s.id) ?? 0
-    return lastMsg > seen
+  const isUnread = (s: ChatSessionDoc): boolean => {
+    if (s.last_message_sender !== 'visitor' || !s.last_message_at) return false
+    return s.last_message_at.toMillis() > (viewedAt.current.get(s.id) ?? 0)
   }
 
   const selectedSessionData = sessions.find(s => s.id === selectedSession)
 
-  // Load macros on mount
+  // Macros (shared doc with the Macros page)
   useEffect(() => {
-    supabase.from('site_settings').select('value').eq('key', 'support_macros').maybeSingle()
-      .then(({ data }) => { if (data?.value && Array.isArray(data.value)) setMacros(data.value) })
-  }, [])
-
-  const fetchSessions = async (showSpinner = false) => {
-    if (showSpinner) setRefreshing(true)
-    try {
-      const data = await bridgeGet({ action: 'chat-poll', type: 'admin-sessions' })
-      setSessions(data.sessions || [])
-    } catch {}
-    setLoading(false)
-    if (showSpinner) setRefreshing(false)
-  }
-
-  const fetchMessages = async (sessionId: string) => {
-    try {
-      const data = await bridgeGet({ action: 'chat-poll', session_id: sessionId })
-      const incoming: Message[] = data.messages || []
-      setMessages(prev => {
-        if (incoming.length === prev.length) return prev
-        if (incoming.length > lastMsgCount.current && lastMsgCount.current > 0) {
-          const newest = incoming[incoming.length - 1]
-          if (newest?.sender_type === 'visitor') {
-            document.title = '💬 New message — Core Conversion Admin'
-            setTimeout(() => { document.title = 'Core Conversion Admin' }, 4000)
-          }
-        }
-        lastMsgCount.current = incoming.length
-        return incoming
+    getDoc(doc(getDb(), MACROS_DOC.collection, MACROS_DOC.id))
+      .then((snap) => {
+        const list = snap.exists() ? (snap.data().list as Macro[]) : []
+        if (Array.isArray(list)) setMacros(list)
       })
-      if (data.session) setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, ...data.session } : s))
-    } catch {}
-  }
-
-  // Poll sessions every 5s
-  useEffect(() => {
-    fetchSessions()
-    sessionPollRef.current = setInterval(() => fetchSessions(), 5000)
-    return () => { if (sessionPollRef.current) clearInterval(sessionPollRef.current) }
+      .catch(() => {})
   }, [])
 
-  // Auto-poll messages every 3s when a session is selected
+  // Live session list, freshest conversation first
   useEffect(() => {
-    if (msgPollRef.current) clearInterval(msgPollRef.current)
+    const q = query(collection(getDb(), 'chat_sessions'), orderBy('last_message_at', 'desc'))
+    const unsub = onSnapshot(q, (snap) => {
+      const next = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ChatSessionDoc, 'id'>) }))
+      const active = next.filter((s) => s.mode !== 'ended')
+      setSessions(active)
+      const newest = active[0]
+      if (newest && isUnread(newest) && newest.id !== selectedSession) {
+        document.title = '💬 New message — Core Conversion Admin'
+        setTimeout(() => { document.title = 'Core Conversion Admin' }, 4000)
+      }
+      setLoading(false)
+    }, () => setLoading(false))
+    return unsub
+  }, [selectedSession])
+
+  // Live messages for the open conversation
+  useEffect(() => {
     if (!selectedSession) return
-    fetchMessages(selectedSession)
-    msgPollRef.current = setInterval(() => fetchMessages(selectedSession), 3000)
-    return () => { if (msgPollRef.current) clearInterval(msgPollRef.current) }
+    const q = query(collection(getDb(), 'chat_sessions', selectedSession, 'messages'), orderBy('created_at', 'asc'))
+    return onSnapshot(q, (snap) => {
+      setMessages(snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data({ serverTimestamps: 'estimate' }) as Omit<ChatMessageDoc, 'id'>),
+      })))
+      viewedAt.current.set(selectedSession, Date.now())
+    })
   }, [selectedSession])
 
   useEffect(() => {
@@ -136,15 +85,18 @@ export default function LiveChatHubPage() {
   const selectSession = (id: string) => {
     viewedAt.current.set(id, Date.now())
     setSelectedSession(id)
-    lastMsgCount.current = 0
+    setMessages([])
   }
 
   const takeover = async (sessionId: string) => {
     try {
-      await bridgePost('chat-takeover', { session_id: sessionId })
+      await updateDoc(doc(getDb(), 'chat_sessions', sessionId), { mode: 'human' })
+      await addDoc(collection(getDb(), 'chat_sessions', sessionId, 'messages'), {
+        sender_type: 'system',
+        content: '🔄 An agent has joined the chat and will assist you now.',
+        created_at: serverTimestamp(),
+      })
       showToast("You've taken over the chat", 'success')
-      await fetchMessages(sessionId)
-      fetchSessions()
     } catch {
       showToast('Failed to take over', 'error')
     }
@@ -152,8 +104,9 @@ export default function LiveChatHubPage() {
 
   const handleInputChange = (value: string) => {
     setInput(value)
-    if (selectedSession) {
-      bridgePost('chat-typing', { session_id: selectedSession, type: 'admin' }).catch(() => {})
+    if (selectedSession && Date.now() - typingThrottleRef.current > 2000) {
+      typingThrottleRef.current = Date.now()
+      updateDoc(doc(getDb(), 'chat_sessions', selectedSession), { admin_typing_at: serverTimestamp() }).catch(() => {})
     }
     const lastWord = value.split(' ').pop() || ''
     if (lastWord.startsWith('/') && lastWord.length > 1) {
@@ -178,17 +131,16 @@ export default function LiveChatHubPage() {
     setInput('')
     setSending(true)
     try {
-      await bridgePost('chat-admin-reply', { session_id: selectedSession, content: text })
-      fetchMessages(selectedSession)
+      await addDoc(collection(getDb(), 'chat_sessions', selectedSession, 'messages'), {
+        sender_type: 'admin', content: text, created_at: serverTimestamp(),
+      })
     } catch { showToast('Failed to send', 'error') }
     setSending(false)
   }
 
-  const formatTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })
-
-  const formatElapsed = (started: string) => {
-    const mins = Math.floor((Date.now() - new Date(started).getTime()) / 60000)
+  const formatElapsed = (started?: { toMillis: () => number }) => {
+    if (!started) return ''
+    const mins = Math.floor((Date.now() - started.toMillis()) / 60000)
     return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`
   }
 
@@ -207,22 +159,13 @@ export default function LiveChatHubPage() {
     <div className="h-full flex overflow-hidden">
       {/* Sessions list */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col shrink-0">
-        <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-gray-900">Live Chat Hub</h2>
-            <p className="text-xs text-gray-500">
-              {sessions.length} session{sessions.length !== 1 ? 's' : ''}
-              {unreadCount > 0 && <span className="ml-1 text-blue-600 font-semibold">· {unreadCount} unread</span>}
-            </p>
-          </div>
-          <button
-            onClick={() => fetchSessions(true)}
-            disabled={refreshing}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-            title="Refresh sessions"
-          >
-            <RefreshCw className={`w-4 h-4 text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
+        <div className="px-4 py-4 border-b border-gray-200">
+          <h2 className="font-bold text-gray-900">Live Chat Hub</h2>
+          <p className="text-xs text-gray-500">
+            {sessions.length} active session{sessions.length !== 1 ? 's' : ''}
+            {unreadCount > 0 && <span className="ml-1 text-blue-600 font-semibold">· {unreadCount} unread</span>}
+            <span className="ml-1 text-emerald-600">· live</span>
+          </p>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loading ? (
@@ -231,7 +174,7 @@ export default function LiveChatHubPage() {
             <div className="p-8 text-center">
               <MessageCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500">No active chats</p>
-              <p className="text-xs text-gray-400 mt-1">New sessions appear here automatically</p>
+              <p className="text-xs text-gray-400 mt-1">New sessions appear here instantly</p>
             </div>
           ) : sessions.map(s => {
             const unread = isUnread(s) && s.id !== selectedSession
@@ -299,15 +242,12 @@ export default function LiveChatHubPage() {
                   <UserCheck className="w-3.5 h-3.5" />You're handling this
                 </span>
               )}
-              <button onClick={() => fetchMessages(selectedSession)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                <RefreshCw className="w-4 h-4 text-gray-500" />
-              </button>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.sender_type === 'system' ? 'justify-center' : m.sender_type === 'visitor' ? 'justify-start' : 'justify-end'}`}>
+            {messages.map((m) => (
+              <div key={m.id} className={`flex ${m.sender_type === 'system' ? 'justify-center' : m.sender_type === 'visitor' ? 'justify-start' : 'justify-end'}`}>
                 <div className={`flex items-end gap-2 max-w-[75%] ${m.sender_type !== 'visitor' && m.sender_type !== 'system' ? 'flex-row-reverse' : ''}`}>
                   {m.sender_type === 'ai' && <Bot className="w-5 h-5 text-purple-400 shrink-0 mb-1" />}
                   {m.sender_type === 'visitor' && <User className="w-5 h-5 text-blue-400 shrink-0 mb-1" />}
@@ -315,7 +255,7 @@ export default function LiveChatHubPage() {
                     <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${bubble(m.sender_type)}`}>{m.content}</div>
                     {m.sender_type !== 'system' && (
                       <p className={`text-xs text-gray-400 mt-0.5 px-1 ${m.sender_type !== 'visitor' ? 'text-right' : ''}`}>
-                        {m.sender_type === 'visitor' ? selectedSessionData.visitor_name : m.sender_type === 'ai' ? 'AI' : 'You'} · {formatTime(m.created_at)}
+                        {m.sender_type === 'visitor' ? selectedSessionData.visitor_name : m.sender_type === 'ai' ? 'AI' : 'You'} · {fmtTime(m.created_at)}
                       </p>
                     )}
                   </div>
@@ -365,7 +305,7 @@ export default function LiveChatHubPage() {
           <div className="text-center">
             <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a chat session</h3>
-            <p className="text-sm text-gray-500">Active sessions appear on the left</p>
+            <p className="text-sm text-gray-500">Active sessions appear on the left — live</p>
           </div>
         </div>
       )}

@@ -1,55 +1,80 @@
 'use client'
 
+// Email Inbox — contact form submissions from Firestore (contact_submissions,
+// written by the submitContact Cloud Function). Replies go out through the
+// sendSupportEmail Cloud Function using the site's SMTP mailbox.
+
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import {
+  collection, query, orderBy, onSnapshot, updateDoc, deleteDoc, doc, Timestamp,
+} from 'firebase/firestore'
+import { getDb } from '@/lib/firebase'
+import { sendSupportEmail } from '@/lib/support'
 import { Mail, Trash2, Archive, Reply, X } from 'lucide-react'
 
+interface Submission {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  company?: string
+  subject?: string
+  service?: string
+  message: string
+  archived?: boolean
+  created_at?: Timestamp
+}
+
 export default function EmailInboxPage() {
-  const [emails, setEmails] = useState<any[]>([])
+  const [emails, setEmails] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<any | null>(null)
+  const [selected, setSelected] = useState<Submission | null>(null)
   const [replyText, setReplyText] = useState('')
   const [sending, setSending] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'unread' | 'archived'>('all')
+  const [notice, setNotice] = useState('')
+  const [filter, setFilter] = useState<'all' | 'inbox' | 'archived'>('all')
 
-  const fetchEmails = async () => {
-    const { data } = await supabase.from('contact_submissions').select('*').order('created_at', { ascending: false })
-    if (data) setEmails(data)
-    setLoading(false)
-  }
-  useEffect(() => { fetchEmails() }, [])
+  useEffect(() => {
+    const q = query(collection(getDb(), 'contact_submissions'), orderBy('created_at', 'desc'))
+    const unsub = onSnapshot(q, (snap) => {
+      setEmails(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Submission, 'id'>) })))
+      setLoading(false)
+    }, () => setLoading(false))
+    return unsub
+  }, [])
 
   const archive = async (id: string) => {
-    await supabase.from('contact_submissions').update({ archived: true }).eq('id', id)
-    fetchEmails()
+    await updateDoc(doc(getDb(), 'contact_submissions', id), { archived: true })
     if (selected?.id === id) setSelected(null)
   }
 
   const deleteEmail = async (id: string) => {
     if (!confirm('Delete this submission?')) return
-    await supabase.from('contact_submissions').delete().eq('id', id)
-    fetchEmails()
+    await deleteDoc(doc(getDb(), 'contact_submissions', id))
     if (selected?.id === id) setSelected(null)
   }
 
   const sendReply = async () => {
-    if (!replyText.trim() || !selected) return
+    if (!replyText.trim() || !selected || sending) return
     setSending(true)
-    const API = process.env.NEXT_PUBLIC_API_URL || 'https://ccoms.ph/api-bridge.php'
-    await fetch(`${API}?action=ticket-reply`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visitor_email: selected.email, visitor_name: selected.name, content: replyText, send_email: true, subject: `Re: ${selected.subject || 'Your Inquiry'}` }),
-      credentials: 'include',
-    })
-    setReplyText('')
+    setNotice('')
+    const err = await sendSupportEmail(
+      selected.email,
+      `Re: ${selected.subject || 'Your Inquiry'} — Core Conversion`,
+      `Hi ${selected.name},\n\n${replyText.trim()}\n\nBest regards,\nCore Conversion Support Team\nhttps://ccoms.ph`,
+    )
+    if (err) {
+      setNotice(`Could not send: ${err}`)
+    } else {
+      setNotice(`Reply sent to ${selected.email}.`)
+      setReplyText('')
+    }
     setSending(false)
-    alert('Reply sent to ' + selected.email)
   }
 
   const filtered = emails.filter(e => {
     if (filter === 'archived') return e.archived
-    if (filter === 'unread') return !e.archived
+    if (filter === 'inbox') return !e.archived
     return true
   })
 
@@ -60,10 +85,13 @@ export default function EmailInboxPage() {
         <p className="text-sm text-gray-500 mt-0.5">Contact form submissions</p>
       </div>
 
-      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-xl w-fit">
-        {(['all','unread','archived'] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${filter === f ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>{f}</button>
-        ))}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+          {(['all','inbox','archived'] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${filter === f ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>{f}</button>
+          ))}
+        </div>
+        {notice && <p className="text-sm text-gray-600">{notice}</p>}
       </div>
 
       <div className="flex gap-4 flex-1 min-h-0">
@@ -83,7 +111,7 @@ export default function EmailInboxPage() {
                   <p className="text-xs text-gray-500 truncate">{email.email}</p>
                   <p className="text-xs text-gray-700 mt-0.5 truncate">{email.subject || email.message?.substring(0, 40)}</p>
                 </div>
-                <p className="text-xs text-gray-400 shrink-0">{new Date(email.created_at).toLocaleDateString()}</p>
+                <p className="text-xs text-gray-400 shrink-0">{email.created_at?.toDate().toLocaleDateString()}</p>
               </div>
             </div>
           ))}
@@ -96,7 +124,9 @@ export default function EmailInboxPage() {
               <div>
                 <h3 className="font-bold text-gray-900">{selected.subject || 'No Subject'}</h3>
                 <p className="text-sm text-gray-600 mt-0.5"><span className="font-medium">{selected.name}</span> · {selected.email}</p>
-                {selected.phone && <p className="text-xs text-gray-400 mt-0.5">{selected.phone}</p>}
+                {(selected.phone || selected.company) && (
+                  <p className="text-xs text-gray-400 mt-0.5">{[selected.phone, selected.company].filter(Boolean).join(' · ')}</p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => archive(selected.id)} title="Archive" className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700"><Archive className="w-4 h-4" /></button>

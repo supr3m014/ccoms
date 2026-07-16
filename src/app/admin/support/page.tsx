@@ -1,13 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, User, Clock, ChevronDown, ChevronUp, Send, Trash2 } from 'lucide-react'
+// Ticket Desk — Firestore-backed (collection: tickets / subcollection messages).
+// Tickets arrive from the chat widget (ticket-from-chat Cloud Function) or are
+// created manually here. Replies can optionally be emailed to the visitor via
+// the sendSupportEmail Cloud Function (admin-authenticated).
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'https://ccoms.ph/api-bridge.php'
-const post = async (action: string, body: object) => {
-  const r = await fetch(`${API}?action=${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' })
-  return r.json()
-}
+import { useState, useEffect } from 'react'
+import {
+  collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc,
+  getDocs, serverTimestamp,
+} from 'firebase/firestore'
+import { getDb } from '@/lib/firebase'
+import { sendSupportEmail, type Ticket, type TicketMessage } from '@/lib/support'
+import { Plus, User, Clock, ChevronDown, ChevronUp, Send, Trash2, Mail } from 'lucide-react'
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-red-100 text-red-700', pending: 'bg-yellow-100 text-yellow-700',
@@ -18,12 +23,14 @@ const PRIORITY_COLORS: Record<string, string> = {
 }
 
 export default function TicketDeskPage() {
-  const [tickets, setTickets] = useState<any[]>([])
-  const [messages, setMessages] = useState<Record<string, any[]>>({})
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [messages, setMessages] = useState<Record<string, TicketMessage[]>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [reply, setReply] = useState('')
+  const [emailReply, setEmailReply] = useState(true)
   const [sending, setSending] = useState(false)
+  const [notice, setNotice] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [filter, setFilter] = useState('all')
   const [nSubject, setNSubject] = useState('')
@@ -34,49 +41,88 @@ export default function TicketDeskPage() {
   const [nMessage, setNMessage] = useState('')
   const [creating, setCreating] = useState(false)
 
-  const fetchTickets = async () => {
-    const data = await post('ticket-list', {})
-    if (data.tickets) setTickets(data.tickets)
-    setLoading(false)
-  }
-  useEffect(() => { fetchTickets() }, [])
+  // Live ticket list
+  useEffect(() => {
+    const q = query(collection(getDb(), 'tickets'), orderBy('created_at', 'desc'))
+    const unsub = onSnapshot(q, (snap) => {
+      setTickets(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Ticket, 'id'>) })))
+      setLoading(false)
+    }, () => setLoading(false))
+    return unsub
+  }, [])
 
-  const openTicket = async (id: string) => {
-    if (expanded === id) { setExpanded(null); return }
-    setExpanded(id)
-    if (!messages[id]) {
-      const data = await post('ticket-messages', { ticket_id: id })
-      if (data.messages) setMessages(prev => ({ ...prev, [id]: data.messages }))
-    }
-  }
+  // Live thread for the expanded ticket
+  useEffect(() => {
+    if (!expanded) return
+    const q = query(collection(getDb(), 'tickets', expanded, 'messages'), orderBy('created_at', 'asc'))
+    return onSnapshot(q, (snap) => {
+      setMessages((prev) => ({
+        ...prev,
+        [expanded]: snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<TicketMessage, 'id'>) })),
+      }))
+    })
+  }, [expanded])
 
-  const sendReply = async (ticketId: string) => {
+  const openTicket = (id: string) => setExpanded(expanded === id ? null : id)
+
+  const sendReply = async (ticket: Ticket) => {
     if (!reply.trim() || sending) return
     setSending(true)
-    await post('ticket-reply', { ticket_id: ticketId, content: reply.trim(), sender_name: 'Admin', is_internal: false })
-    setReply('')
-    const data = await post('ticket-messages', { ticket_id: ticketId })
-    if (data.messages) setMessages(prev => ({ ...prev, [ticketId]: data.messages }))
+    setNotice('')
+    const text = reply.trim()
+    try {
+      await addDoc(collection(getDb(), 'tickets', ticket.id, 'messages'), {
+        sender_type: 'admin', sender_name: 'Support Team', content: text,
+        is_internal: false, created_at: serverTimestamp(),
+      })
+      await updateDoc(doc(getDb(), 'tickets', ticket.id), { updated_at: serverTimestamp() })
+      setReply('')
+      if (emailReply && ticket.visitor_email) {
+        const err = await sendSupportEmail(
+          ticket.visitor_email,
+          `Re: ${ticket.subject} — Core Conversion Support`,
+          `Hi ${ticket.visitor_name},\n\n${text}\n\nBest regards,\nCore Conversion Support Team\nhttps://ccoms.ph`,
+        )
+        setNotice(err ? `Reply saved, but the email was not sent: ${err}` : `Reply saved and emailed to ${ticket.visitor_email}.`)
+      } else {
+        setNotice('Reply saved to the ticket.')
+      }
+    } catch {
+      setNotice('Could not save the reply — please try again.')
+    }
     setSending(false)
   }
 
   const setStatus = async (ticketId: string, status: string) => {
-    await post('ticket-status', { ticket_id: ticketId, status })
-    fetchTickets()
+    await updateDoc(doc(getDb(), 'tickets', ticketId), { status, updated_at: serverTimestamp() })
   }
 
   const deleteTicket = async (id: string) => {
     if (!confirm('Delete this ticket and all messages?')) return
-    await post('ticket-delete', { ticket_id: id })
+    const msgs = await getDocs(collection(getDb(), 'tickets', id, 'messages'))
+    await Promise.all(msgs.docs.map((m) => deleteDoc(m.ref)))
+    await deleteDoc(doc(getDb(), 'tickets', id))
     if (expanded === id) setExpanded(null)
-    fetchTickets()
   }
 
   const createTicket = async (e: React.FormEvent) => {
     e.preventDefault(); setCreating(true)
-    await post('ticket-create', { subject: nSubject, visitor_name: nName, visitor_email: nEmail, category: nCategory, priority: nPriority, message: nMessage, source: 'manual' })
-    setNSubject(''); setNName(''); setNEmail(''); setNMessage('')
-    setShowNew(false); setCreating(false); fetchTickets()
+    try {
+      const ref = await addDoc(collection(getDb(), 'tickets'), {
+        subject: nSubject.trim(), visitor_name: nName.trim(), visitor_email: nEmail.trim().toLowerCase(),
+        visitor_phone: '', category: nCategory, status: 'open', priority: nPriority, source: 'manual',
+        created_at: serverTimestamp(), updated_at: serverTimestamp(),
+      })
+      await addDoc(collection(getDb(), 'tickets', ref.id, 'messages'), {
+        sender_type: 'customer', sender_name: nName.trim(), content: nMessage.trim(),
+        is_internal: false, created_at: serverTimestamp(),
+      })
+      setNSubject(''); setNName(''); setNEmail(''); setNMessage('')
+      setShowNew(false)
+    } catch {
+      setNotice('Could not create the ticket — please try again.')
+    }
+    setCreating(false)
   }
 
   const filtered = filter === 'all' ? tickets : tickets.filter(t => t.status === filter)
@@ -92,6 +138,8 @@ export default function TicketDeskPage() {
           <Plus className="w-4 h-4" /> New Ticket
         </button>
       </div>
+
+      {notice && <p className="mb-4 text-sm text-gray-600">{notice}</p>}
 
       {showNew && (
         <form onSubmit={createTicket} className="bg-white border border-gray-200 rounded-xl p-5 mb-6 space-y-3">
@@ -137,7 +185,7 @@ export default function TicketDeskPage() {
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                   <span className="flex items-center gap-1"><User className="w-3 h-3" />{ticket.visitor_name} · {ticket.visitor_email}</span>
-                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(ticket.created_at).toLocaleDateString()}</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{ticket.created_at?.toDate().toLocaleDateString()}</span>
                 </div>
               </div>
               {expanded === ticket.id ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />}
@@ -152,7 +200,7 @@ export default function TicketDeskPage() {
                   <button onClick={() => deleteTicket(ticket.id)} className="ml-auto text-xs text-red-500 hover:text-red-700 flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" />Delete</button>
                 </div>
                 <div className="space-y-3 max-h-64 overflow-y-auto mb-3 bg-gray-50 rounded-xl p-3">
-                  {(messages[ticket.id] || []).map((msg: any) => (
+                  {(messages[ticket.id] || []).map((msg) => (
                     <div key={msg.id} className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${msg.sender_type === 'admin' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-800'}`}>
                         <p className="text-xs font-semibold mb-0.5 opacity-75">{msg.sender_name || msg.sender_type}</p>
@@ -163,9 +211,13 @@ export default function TicketDeskPage() {
                   {(!messages[ticket.id] || messages[ticket.id].length === 0) && <p className="text-xs text-gray-400 text-center py-2">No messages</p>}
                 </div>
                 <div className="flex gap-2">
-                  <input value={reply} onChange={e => setReply(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendReply(ticket.id) }} placeholder="Type a reply and press Enter…" className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  <button onClick={() => sendReply(ticket.id)} disabled={sending || !reply.trim()} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-3 py-2 rounded-lg"><Send className="w-4 h-4" /></button>
+                  <input value={reply} onChange={e => setReply(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') sendReply(ticket) }} placeholder="Type a reply and press Enter…" className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <button onClick={() => sendReply(ticket)} disabled={sending || !reply.trim()} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-3 py-2 rounded-lg"><Send className="w-4 h-4" /></button>
                 </div>
+                <label className="mt-2 flex items-center gap-2 text-xs text-gray-500 cursor-pointer w-fit">
+                  <input type="checkbox" checked={emailReply} onChange={e => setEmailReply(e.target.checked)} className="w-3.5 h-3.5" />
+                  <Mail className="w-3.5 h-3.5" /> Also email this reply to {ticket.visitor_email}
+                </label>
               </div>
             )}
           </div>

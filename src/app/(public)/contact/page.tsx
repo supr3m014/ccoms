@@ -2,9 +2,16 @@
 
 import { useState, FormEvent, useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { supabase } from '@/lib/supabase'
 import CTAButtons from '@/components/CTAButtons'
 import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle } from 'lucide-react'
+
+// The Cloud Function endpoint (same pattern as /assessment). Local dev falls
+// back to the Functions emulator; production sets NEXT_PUBLIC_CONTACT_ENDPOINT.
+const CONTACT_ENDPOINT =
+  process.env.NEXT_PUBLIC_CONTACT_ENDPOINT ||
+  (process.env.NODE_ENV === 'development'
+    ? 'http://127.0.0.1:5001/demo-ccoms/asia-southeast1/submitContact'
+    : '')
 
 function AnimatedSection({ children, className = "" }: { children: React.ReactNode, className?: string }) {
   const ref = useRef(null)
@@ -31,6 +38,7 @@ export default function ContactPage() {
     company: '',
     message: ''
   })
+  const [honeypot, setHoneypot] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,24 +49,26 @@ export default function ContactPage() {
     setError(null)
 
     try {
-      if (!supabase) {
-        throw new Error('Database connection not available')
+      if (!CONTACT_ENDPOINT) {
+        throw new Error('Contact endpoint not configured')
       }
 
-      const { error: submitError } = await supabase
-        .from('contact_submissions')
-        .insert([
-          {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone || null,
-            company: formData.company || null,
-            message: formData.message,
-            status: 'new'
-          }
-        ])
-
-      if (submitError) throw submitError
+      const res = await fetch(CONTACT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          message: formData.message,
+          website_confirm: honeypot,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Submission failed')
+      }
 
       setIsSubmitted(true)
       setFormData({ name: '', email: '', phone: '', company: '', message: '' })
@@ -130,6 +140,17 @@ export default function ContactPage() {
                     </motion.div>
                   ) : (
                     <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Honeypot — invisible to humans, bots fill it in */}
+                      <input
+                        type="text"
+                        name="website_confirm"
+                        value={honeypot}
+                        onChange={(e) => setHoneypot(e.target.value)}
+                        tabIndex={-1}
+                        autoComplete="off"
+                        aria-hidden="true"
+                        className="absolute -left-[9999px] h-0 w-0 opacity-0"
+                      />
                       {error && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}

@@ -1,13 +1,21 @@
 'use client'
 
+// Live chat widget — Firebase edition.
+//
+// The heavy lifting lives in src/lib/chat-client.ts, which is dynamic-imported
+// the moment the visitor opens the widget (or restores a session). Until then
+// the public bundle carries zero Firebase JS (spec §19). Messages arrive in
+// realtime via Firestore onSnapshot — no polling.
+
 import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, Send, ChevronDown, Loader2 } from 'lucide-react'
+
+type ChatLib = typeof import('@/lib/chat-client')
 
 interface Message {
   id?: string
   sender_type: 'visitor' | 'ai' | 'admin' | 'system'
   content: string
-  created_at?: string
 }
 
 interface FormErrors {
@@ -68,6 +76,7 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [aiThinking, setAiThinking] = useState(false)
   const [mode, setMode] = useState<'ai' | 'human' | 'ended'>('ai')
   const [ticketOffered, setTicketOffered] = useState(false)
   const [ticketCreated, setTicketCreated] = useState(false)
@@ -79,15 +88,21 @@ export default function ChatWidget() {
   const [isMobile, setIsMobile] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const pollRef = useRef<NodeJS.Timeout | null>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const typingClearRef = useRef<NodeJS.Timeout | null>(null)
+  const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const libRef = useRef<ChatLib | null>(null)
+  const unsubsRef = useRef<(() => void)[]>([])
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', address: '', country: 'Philippines',
     category: 'general' as Category,
   })
 
-  const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
+  const loadLib = async (): Promise<ChatLib> => {
+    if (!libRef.current) libRef.current = await import('@/lib/chat-client')
+    return libRef.current
+  }
 
   // Detect mobile after mount (avoids SSR mismatch)
   useEffect(() => {
@@ -119,24 +134,6 @@ export default function ChatWidget() {
       window.scrollTo(0, scrollY)
     }
   }, [step, isMobile])
-
-  const bridgePost = async (action: string, body: any) => {
-    const res = await fetch(`${BRIDGE}?action=${action}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(body),
-    })
-    return res.json()
-  }
-
-  const bridgeGet = async (action: string, params: Record<string, string> = {}) => {
-    const url = new URL(BRIDGE)
-    url.searchParams.set('action', action)
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
-    const res = await fetch(url.toString(), { credentials: 'include' })
-    return res.json()
-  }
 
   const validateAll = (): FormErrors => {
     const e: FormErrors = {}
@@ -182,15 +179,11 @@ export default function ChatWidget() {
     try {
       const { sessionId: sid, form: savedForm, step: savedStep } = JSON.parse(saved)
       if (!sid || savedStep === 'ended') { localStorage.removeItem(STORAGE_KEY); return }
-      const url = new URL(BRIDGE)
-      url.searchParams.set('action', 'chat-poll')
-      url.searchParams.set('session_id', sid)
-      fetch(url.toString(), { credentials: 'include' }).then(r => r.json()).then(data => {
-        const session = data.session
-        if (!session || session.mode === 'ended') { localStorage.removeItem(STORAGE_KEY); return }
+      loadLib().then(async (lib) => {
+        const session = await lib.getOpenSession(sid)
+        if (!session) { localStorage.removeItem(STORAGE_KEY); return }
         setSessionId(sid)
         setMode(session.mode)
-        setMessages(data.messages || [])
         setStep('chat')
         if (savedForm) setForm(savedForm)
       }).catch(() => localStorage.removeItem(STORAGE_KEY))
@@ -209,29 +202,40 @@ export default function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Realtime subscriptions — replace the old 2.5s polling entirely.
   useEffect(() => {
     if (!sessionId || step !== 'chat') return
-    pollRef.current = setInterval(async () => {
-      try {
-        const data = await bridgeGet('chat-poll', { session_id: sessionId })
-        const incoming: Message[] = data.messages || []
-        setMessages(prev => incoming.length > prev.length ? incoming : prev)
-        if (data.session?.mode === 'ended') {
+    let cancelled = false
+    loadLib().then((lib) => {
+      if (cancelled) return
+      const unsubMsgs = lib.subscribeMessages(sessionId, (msgs) => {
+        setMessages(msgs)
+        const last = msgs[msgs.length - 1]
+        if (last && last.sender_type !== 'visitor') {
+          setAiThinking(false)
+          if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current)
+        }
+      })
+      const unsubSession = lib.subscribeSession(sessionId, (s) => {
+        if (!s) return
+        setMode(s.mode)
+        if (s.mode === 'ended') {
           setStep('ended')
           setTicketOffered(true)
         }
-        if (data.session?.mode) setMode(data.session.mode)
-        if (data.session?.admin_typing_at) {
-          const dateStr = data.session.admin_typing_at.endsWith('Z')
-            ? data.session.admin_typing_at
-            : `${data.session.admin_typing_at}Z`
-          setAdminTyping(Date.now() - new Date(dateStr).getTime() < 5000)
-        } else {
-          setAdminTyping(false)
-        }
-      } catch {}
-    }, 2500)
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+        const ts = s.admin_typing_at
+        const active = !!ts && Date.now() - ts.toMillis() < 5000
+        setAdminTyping(active)
+        if (typingClearRef.current) clearTimeout(typingClearRef.current)
+        if (active) typingClearRef.current = setTimeout(() => setAdminTyping(false), 5000)
+      })
+      unsubsRef.current = [unsubMsgs, unsubSession]
+    })
+    return () => {
+      cancelled = true
+      unsubsRef.current.forEach(u => u())
+      unsubsRef.current = []
+    }
   }, [sessionId, step])
 
   const startChat = async () => {
@@ -243,7 +247,8 @@ export default function ChatWidget() {
     setSending(true)
     setChatError(null)
     try {
-      const data = await bridgePost('chat-start', {
+      const lib = await loadLib()
+      const data = await lib.startChat({
         visitor_name: form.name.trim(),
         visitor_email: form.email.trim(),
         visitor_phone: form.phone.trim(),
@@ -255,8 +260,7 @@ export default function ChatWidget() {
         setChatError(data.error)
       } else if (data.session_id) {
         setSessionId(data.session_id)
-        setMessages([{ sender_type: 'ai', content: data.welcome }])
-        setStep('chat')
+        setStep('chat') // welcome message streams in via the subscription
       } else {
         setChatError('Unexpected response from server. Please try again.')
       }
@@ -270,17 +274,15 @@ export default function ChatWidget() {
     if (!input.trim() || !sessionId || sending) return
     const text = input.trim()
     setInput('')
-    setMessages(prev => [...prev, { sender_type: 'visitor', content: text }])
     setSending(true)
     try {
-      const data = await bridgePost('chat-send', { session_id: sessionId, content: text })
-      if (data.message) {
-        setMessages(prev => [...prev, {
-          sender_type: data.mode === 'human' ? 'admin' : 'ai',
-          content: data.message,
-        }])
+      const lib = await loadLib()
+      await lib.sendVisitorMessage(sessionId, text)
+      if (mode === 'ai') {
+        setAiThinking(true)
+        if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current)
+        aiTimeoutRef.current = setTimeout(() => setAiThinking(false), 30000)
       }
-      if (data.mode) setMode(data.mode)
     } catch {
       setMessages(prev => [...prev, { sender_type: 'system', content: '⚠️ Failed to send message. Please try again.' }])
     }
@@ -289,22 +291,23 @@ export default function ChatWidget() {
 
   const endChat = async () => {
     if (!sessionId) return
-    await bridgePost('chat-end', { session_id: sessionId })
+    try { (await loadLib()).endChat(sessionId) } catch {}
     setStep('ended')
     setTicketOffered(true)
-    if (pollRef.current) clearInterval(pollRef.current)
   }
 
   const createTicket = async () => {
     if (!sessionId) return
-    await bridgePost('chat-create-ticket', { session_id: sessionId })
-    setTicketCreated(true)
+    try {
+      await (await loadLib()).requestTicket(sessionId)
+      setTicketCreated(true)
+    } catch {}
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value)
-    if (!typingTimeoutRef.current && sessionId) {
-      bridgePost('chat-typing', { session_id: sessionId, type: 'visitor' }).catch(() => {})
+    if (!typingTimeoutRef.current && sessionId && libRef.current) {
+      libRef.current.setVisitorTyping(sessionId).catch(() => {})
     }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     typingTimeoutRef.current = setTimeout(() => { typingTimeoutRef.current = null }, 2000)
@@ -507,13 +510,13 @@ export default function ChatWidget() {
         <>
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2 bg-gray-50" style={{ overscrollBehavior: 'contain' }}>
             {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.sender_type === 'visitor' ? 'justify-end' : m.sender_type === 'system' ? 'justify-center' : 'justify-start'}`}>
+              <div key={m.id ?? i} className={`flex ${m.sender_type === 'visitor' ? 'justify-end' : m.sender_type === 'system' ? 'justify-center' : 'justify-start'}`}>
                 <div className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${bubbleColor(m.sender_type)}`}>
                   {m.content}
                 </div>
               </div>
             ))}
-            {sending && (
+            {aiThinking && (
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-100 shadow-sm px-4 py-3 rounded-2xl flex gap-1.5">
                   <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -522,7 +525,7 @@ export default function ChatWidget() {
                 </div>
               </div>
             )}
-            {adminTyping && !sending && (
+            {adminTyping && !aiThinking && (
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-100 shadow-sm px-4 py-3 rounded-2xl flex gap-1.5 items-center italic text-xs text-gray-500">
                   Agent is typing...

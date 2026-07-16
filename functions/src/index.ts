@@ -10,12 +10,14 @@
 
 import { onRequest } from 'firebase-functions/v2/https'
 import { logger } from 'firebase-functions/v2'
-import { initializeApp } from 'firebase-admin/app'
+import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { createHash } from 'node:crypto'
 
-initializeApp()
+if (!getApps().length) initializeApp()
 const db = getFirestore()
+
+export { chatStart, onChatMessageCreated, onChatSessionUpdated, submitContact, sendSupportEmail } from './support'
 
 /* ── Approved options (must match src/lib/leads.ts) ─────────────────── */
 

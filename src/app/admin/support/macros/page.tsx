@@ -1,30 +1,38 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Plus, Save, Trash2, Zap } from 'lucide-react'
+// Response Macros — Firestore-backed (doc: support_config/macros, field list).
+// One shared doc: the Live Chat Hub reads the exact same doc, which fixes the
+// old bug where macros were saved under one key and read from another.
 
-interface Macro { id: string; title: string; shorthand: string; content: string; created_at: string }
+import { useState, useEffect } from 'react'
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore'
+import { getDb } from '@/lib/firebase'
+import { MACROS_DOC, type Macro } from '@/lib/support'
+import { Plus, Save, Trash2, Zap } from 'lucide-react'
 
 export default function MacrosPage() {
   const [macros, setMacros] = useState<Macro[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Macro | null>(null)
   const [saving, setSaving] = useState(false)
+  const [notice, setNotice] = useState('')
   const [title, setTitle] = useState('')
   const [shorthand, setShorthand] = useState('')
   const [content, setContent] = useState('')
 
-  const fetchMacros = async () => {
-    const { data } = await supabase.from('site_settings').select('*').eq('key', 'chat_macros').maybeSingle()
-    const list: Macro[] = data?.value ? JSON.parse(JSON.stringify(data.value)) : []
-    setMacros(Array.isArray(list) ? list : [])
-    setLoading(false)
-  }
-  useEffect(() => { fetchMacros() }, [])
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDoc(doc(getDb(), MACROS_DOC.collection, MACROS_DOC.id))
+        const list = snap.exists() ? (snap.data().list as Macro[]) : []
+        setMacros(Array.isArray(list) ? list : [])
+      } catch { setNotice('Could not load macros.') }
+      setLoading(false)
+    })()
+  }, [])
 
-  const saveMacros = async (list: Macro[]) => {
-    await supabase.from('site_settings').upsert({ key: 'chat_macros', value: list as any }, { onConflict: 'key' })
+  const persist = async (list: Macro[]) => {
+    await setDoc(doc(getDb(), MACROS_DOC.collection, MACROS_DOC.id), { list, updatedAt: Timestamp.now() }, { merge: true })
   }
 
   const startNew = () => {
@@ -36,26 +44,30 @@ export default function MacrosPage() {
   }
 
   const save = async (e: React.FormEvent) => {
-    e.preventDefault(); setSaving(true)
+    e.preventDefault(); setSaving(true); setNotice('')
+    const sh = shorthand.startsWith('/') ? shorthand : '/' + shorthand
     let updated: Macro[]
     if (editing) {
-      updated = macros.map(m => m.id === editing.id ? { ...m, title, shorthand: shorthand.startsWith('/') ? shorthand : '/' + shorthand, content } : m)
+      updated = macros.map(m => m.id === editing.id ? { ...m, title, shorthand: sh, content } : m)
     } else {
-      const id = Date.now().toString()
-      updated = [...macros, { id, title, shorthand: shorthand.startsWith('/') ? shorthand : '/' + shorthand, content, created_at: new Date().toISOString() }]
+      updated = [...macros, { id: Date.now().toString(), title, shorthand: sh, content, created_at: new Date().toISOString() }]
     }
-    await saveMacros(updated)
-    setMacros(updated)
-    startNew()
+    try {
+      await persist(updated)
+      setMacros(updated)
+      startNew()
+    } catch { setNotice('Save failed — please try again.') }
     setSaving(false)
   }
 
   const deleteMacro = async (id: string) => {
     if (!confirm('Delete this macro?')) return
     const updated = macros.filter(m => m.id !== id)
-    await saveMacros(updated)
-    setMacros(updated)
-    if (editing?.id === id) startNew()
+    try {
+      await persist(updated)
+      setMacros(updated)
+      if (editing?.id === id) startNew()
+    } catch { setNotice('Delete failed — please try again.') }
   }
 
   return (
@@ -69,6 +81,8 @@ export default function MacrosPage() {
           <Plus className="w-4 h-4" /> New Macro
         </button>
       </div>
+
+      {notice && <p className="mb-4 text-sm text-gray-600">{notice}</p>}
 
       <div className="flex gap-6">
         {/* Macro list */}
