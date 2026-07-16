@@ -1,207 +1,105 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Code, Plus } from 'lucide-react'
+// SEO Scripts — Firestore-backed (doc: seo_config/scripts).
+// Content is baked into the live HTML at deploy time by scripts/bake-seo.mjs
+// (post-build injector) — zero public-bundle cost, real <script> tags that run.
 
-interface Script {
-  id: string
-  location: string
-  script_content: string
-  environment: string
-  version: number
-  is_active: boolean
-  created_at: string
-}
+import { useState, useEffect } from 'react'
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore'
+import { getDb } from '@/lib/firebase'
+import { Code, Save, RotateCcw, Info } from 'lucide-react'
+
+const SLOTS = [
+  { key: 'head', label: 'Head Scripts', hint: 'Injected before </head> (e.g. Google Tag Manager, verification tags).', ph: '<!-- e.g. GTM head snippet -->\n<script>…</script>' },
+  { key: 'bodyStart', label: 'Body Start Scripts', hint: 'Injected right after <body> (e.g. GTM <noscript>).', ph: '<!-- e.g. GTM noscript -->' },
+  { key: 'footer', label: 'Footer Scripts', hint: 'Injected before </body> (e.g. chat widgets, deferred analytics).', ph: '<script>…</script>' },
+] as const
+
+type SlotKey = (typeof SLOTS)[number]['key']
+type Scripts = Record<SlotKey, string>
+
+const EMPTY: Scripts = { head: '', bodyStart: '', footer: '' }
 
 export default function SEOScriptsPage() {
-  const [scripts, setScripts] = useState<Script[]>([])
+  const [scripts, setScripts] = useState<Scripts>(EMPTY)
+  const [saved, setSaved] = useState<Scripts>(EMPTY)
   const [loading, setLoading] = useState(true)
-  const [headScript, setHeadScript] = useState('')
-  const [bodyScript, setBodyScript] = useState('')
-  const [footerScript, setFooterScript] = useState('')
-  const [environment, setEnvironment] = useState('both')
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState('')
 
   useEffect(() => {
-    fetchScripts()
+    (async () => {
+      try {
+        const snap = await getDoc(doc(getDb(), 'seo_config', 'scripts'))
+        const data = (snap.exists() ? snap.data() : {}) as Partial<Scripts>
+        const next = { head: data.head || '', bodyStart: data.bodyStart || '', footer: data.footer || '' }
+        setScripts(next); setSaved(next)
+      } catch (err) {
+        console.error('Error loading scripts:', err); setStatus('Could not load scripts.')
+      } finally { setLoading(false) }
+    })()
   }, [])
 
-  const fetchScripts = async () => {
+  const dirty = (Object.keys(EMPTY) as SlotKey[]).some((k) => scripts[k] !== saved[k])
+
+  const save = async () => {
+    setSaving(true); setStatus('')
     try {
-      const { data, error } = await supabase
-        .from('seo_scripts')
-        .select('*')
-        .eq('is_active', true)
-        .order('location')
-
-      if (error) throw error
-
-      const scriptsData = data || []
-      setScripts(scriptsData)
-
-      scriptsData.forEach((script: any) => {
-        if (script.location === 'head') setHeadScript(script.script_content)
-        if (script.location === 'body_start') setBodyScript(script.script_content)
-        if (script.location === 'footer') setFooterScript(script.script_content)
-      })
-    } catch (error) {
-      console.error('Error fetching scripts:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const saveScripts = async () => {
-    try {
-      await supabase.from('seo_scripts').update({ is_active: false }).neq('id', '00000000-0000-0000-0000-000000000000')
-
-      const scriptsToInsert = []
-
-      if (headScript.trim()) {
-        scriptsToInsert.push({
-          location: 'head',
-          script_content: headScript.trim(),
-          environment,
-          is_active: true
-        })
-      }
-
-      if (bodyScript.trim()) {
-        scriptsToInsert.push({
-          location: 'body_start',
-          script_content: bodyScript.trim(),
-          environment,
-          is_active: true
-        })
-      }
-
-      if (footerScript.trim()) {
-        scriptsToInsert.push({
-          location: 'footer',
-          script_content: footerScript.trim(),
-          environment,
-          is_active: true
-        })
-      }
-
-      if (scriptsToInsert.length > 0) {
-        const { error } = await supabase
-          .from('seo_scripts')
-          .insert(scriptsToInsert)
-
-        if (error) throw error
-      }
-
-      alert('Scripts saved successfully!')
-      fetchScripts()
-    } catch (error: any) {
-      console.error('Error saving scripts:', error)
-      alert(error.message || 'Failed to save scripts')
-    }
+      await setDoc(doc(getDb(), 'seo_config', 'scripts'), { ...scripts, updatedAt: Timestamp.now() }, { merge: true })
+      setSaved(scripts); setStatus('Saved. Changes go live on the next deploy (build → bake → push).')
+    } catch (err) {
+      console.error(err); setStatus('Save failed — please try again.')
+    } finally { setSaving(false) }
   }
 
   return (
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">SEO Scripts</h1>
-        <p className="text-gray-600">Manage global scripts for tracking, analytics, and SEO</p>
+        <p className="text-gray-600">Global tracking, analytics, and verification scripts — baked into the site on deploy.</p>
       </div>
 
       {loading ? (
-        <div className="bg-white rounded-lg shadow-md p-12 text-center">
-          <p className="text-gray-500">Loading scripts...</p>
-        </div>
+        <div className="bg-white rounded-lg shadow-md p-12 text-center text-gray-500">Loading scripts…</div>
       ) : (
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Environment</label>
-              <select
-                value={environment}
-                onChange={(e) => setEnvironment(e.target.value)}
-                className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="both">Both (Staging & Production)</option>
-                <option value="staging">Staging Only</option>
-                <option value="production">Production Only</option>
-              </select>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Code className="w-4 h-4 inline mr-2" />
-                  Head Scripts
+          <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
+            {SLOTS.map(({ key, label, hint, ph }) => (
+              <div key={key}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Code className="w-4 h-4 inline mr-2" />{label}
                 </label>
-                <p className="text-xs text-gray-500 mb-2">Scripts injected in the {'<head>'} section (e.g., Google Tag Manager)</p>
+                <p className="text-xs text-gray-500 mb-2">{hint}</p>
                 <textarea
-                  value={headScript}
-                  onChange={(e) => setHeadScript(e.target.value)}
+                  value={scripts[key]}
+                  onChange={(e) => setScripts((s) => ({ ...s, [key]: e.target.value }))}
                   className="w-full h-32 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  placeholder='<script>
-// Your head scripts here
-</script>'
+                  placeholder={ph}
+                  spellCheck={false}
                 />
               </div>
+            ))}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Code className="w-4 h-4 inline mr-2" />
-                  Body Start Scripts
-                </label>
-                <p className="text-xs text-gray-500 mb-2">Scripts injected at the start of {'<body>'} (e.g., GTM noscript)</p>
-                <textarea
-                  value={bodyScript}
-                  onChange={(e) => setBodyScript(e.target.value)}
-                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  placeholder='<!-- Your body start scripts here -->'
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Code className="w-4 h-4 inline mr-2" />
-                  Footer Scripts
-                </label>
-                <p className="text-xs text-gray-500 mb-2">Scripts injected before closing {'</body>'} (e.g., analytics, chat widgets)</p>
-                <textarea
-                  value={footerScript}
-                  onChange={(e) => setFooterScript(e.target.value)}
-                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  placeholder='<script>
-// Your footer scripts here
-</script>'
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex gap-2">
-              <button
-                onClick={saveScripts}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-              >
-                Save Scripts
+            <div className="flex items-center gap-3">
+              <button onClick={save} disabled={saving || !dirty}
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+                <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save Scripts'}
               </button>
-              <button
-                onClick={() => {
-                  setHeadScript('')
-                  setBodyScript('')
-                  setFooterScript('')
-                }}
-                className="border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-2 rounded-lg font-semibold transition-colors"
-              >
-                Clear All
+              <button onClick={() => setScripts(saved)} disabled={!dirty}
+                className="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 px-6 py-2 rounded-lg font-semibold transition-colors">
+                <RotateCcw className="w-4 h-4" /> Revert
               </button>
+              {status && <span className="text-sm text-gray-600">{status}</span>}
             </div>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-2">Important Notes:</h3>
+            <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2"><Info className="w-4 h-4" /> How these apply</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Scripts are versioned automatically - previous versions are preserved</li>
-              <li>• Only one version can be active at a time per location</li>
-              <li>• Scripts are cached and may take a few minutes to update on your site</li>
-              <li>• Always test scripts in staging before deploying to production</li>
+              <li>• Saved here to the database instantly, but they take effect on the <strong>live site after the next deploy</strong>.</li>
+              <li>• Deploy runs <code>next build</code> → <code>node scripts/bake-seo.mjs</code> (injects these into every page) → push.</li>
+              <li>• Paste complete snippets including their <code>&lt;script&gt;</code> tags — they’re written as real HTML, so they execute.</li>
+              <li>• GA4 and the Facebook Pixel are already hardcoded in the layout; add <em>additional</em> tags here.</li>
             </ul>
           </div>
         </div>

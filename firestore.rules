@@ -37,6 +37,27 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ── SEO section ──────────────────────────────────────────────────────
+    // Admin-managed SEO config. Not public: redirects are applied to the
+    // static site via a generated .htaccess block on deploy, so the public
+    // browser never needs to read them.
+    match /redirects/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // 404 log — admins review and clear; entries are created server-side
+    // (a Cloud Function) later, never by the public client.
+    match /error_404_log/{id} {
+      allow read, update, delete: if isAdmin();
+      allow create: if false;
+    }
+
+    // Baked SEO config (scripts, and later robots/meta defaults/schema).
+    // Read at deploy time via the Admin SDK, so no public client read needed.
+    match /seo_config/{id} {
+      allow read, write: if isAdmin();
+    }
+
     // Default deny for anything else.
     match /{document=**} {
       allow read, write: if false;
