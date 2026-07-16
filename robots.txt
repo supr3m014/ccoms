@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Keep private/utility areas out of the index
+Disallow: /admin
+Disallow: /assessment
+
+Sitemap: https://ccoms.ph/sitemap.xml

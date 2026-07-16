@@ -1,0 +1,19 @@
+# Core Conversion
+
+> Strategy-led digital marketing and development agency in the Philippines.
+> We help businesses replace disconnected marketing activity with a coordinated,
+> measurable path to growth.
+
+## Services
+- [Digital Marketing Services](https://ccoms.ph/services/digital-marketing-services): Coordinated, retained growth programs.
+- [SEO Services](https://ccoms.ph/services/seo): Technical SEO, content architecture, authority development.
+- [Local SEO](https://ccoms.ph/services/local-seo): Google Business Profile, map visibility, local conversion.
+- [GEO & AI Search Visibility](https://ccoms.ph/services/geo): Entity clarity and citation readiness for AI-assisted search.
+- [Website Development](https://ccoms.ph/services/website-development): Business websites, e-commerce, platforms.
+- [Mobile App Development](https://ccoms.ph/services/mobile-app-development): Customer and operational applications.
+- [AI Ad & Commercial Production](https://ccoms.ph/services/ai-ad-commercial-production): Campaign-ready commercial assets.
+
+## Company
+- [About](https://ccoms.ph/about)
+- [Case Studies](https://ccoms.ph/case-studies)
+- [Contact](https://ccoms.ph/contact)
