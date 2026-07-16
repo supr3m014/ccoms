@@ -1,402 +1,541 @@
 'use client'
 
-import { useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
+/*
+ * Mobile App Development — executive canvas edition.
+ * Visual identity for this page: the product dossier. A decision ledger, a
+ * product brief that reads like a boardroom document, an architecture stack,
+ * and real QR Seal product screens as proof. Fine-grained canvas, navy ink.
+ */
+
+import { useState } from 'react'
 import Link from 'next/link'
-import { Smartphone, CheckCircle2, ArrowRight, Zap, Shield, Layers, Users, Cloud, Lock } from 'lucide-react'
+import { Reveal } from '@/components/Reveal'
+import {
+  ArrowRight, ArrowUpRight, Plus, Minus, CheckCircle2, AlertCircle, Smartphone,
+  Layers, Database, KeyRound, LayoutDashboard, CreditCard, BellRing, BarChart3,
+  Plug, Server, Compass, PenTool, DraftingCompass, Code2, TestTube2, Rocket, HeartPulse,
+} from 'lucide-react'
 
-function AnimatedSection({ children, className = "" }: { children: React.ReactNode, className?: string }) {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
+const CAL = 'https://calendly.com/ccoms/discovery-call'
 
+/* ─────────────────────────── Data ─────────────────────────── */
+
+const APP_YES = [
+  'Recurring customer interaction',
+  'Push notifications',
+  'Location, camera, QR, or device features',
+  'Offline access',
+  'Customer accounts and saved activity',
+  'Subscriptions or digital services',
+  'Operational field use',
+  'Staff workflows',
+  'Marketplace or community behavior',
+  'Loyalty and repeated transactions',
+  'A software product sold to users',
+]
+const APP_NO = [
+  'Users interact only occasionally',
+  'The experience is primarily informational',
+  'Discovery through search is the main need',
+  'The budget cannot support maintenance',
+  'No internal owner can support the product',
+  'The use case is served well by a responsive website or progressive web app',
+]
+
+const BRIEF = [
+  { field: 'Business Role', q: 'What revenue, operational, customer, retention, or platform objective should the app support?' },
+  { field: 'Primary Users', q: 'Who will use it, under what conditions, and how frequently?' },
+  { field: 'Core Job', q: 'What recurring problem or task must the product solve well?' },
+  { field: 'Critical Journey', q: 'What is the minimum path from opening the app to receiving value?' },
+  { field: 'Business Model', q: 'Is the app a paid product, subscription, support channel, operational tool, lead source, marketplace, or companion to another service?' },
+  { field: 'Data and Integrations', q: 'What accounts, payment systems, APIs, databases, dashboards, devices, or third-party platforms are required?' },
+  { field: 'Ownership and Operations', q: 'Who will approve changes, support users, maintain content, resolve incidents, and fund continued improvement?' },
+]
+
+const PATHS = [
+  {
+    n: '01', title: 'Product Validation',
+    when: 'For early-stage ideas requiring definition before full development.',
+    outputs: ['Problem definition', 'User flows', 'Feature prioritization', 'Technical feasibility', 'Prototype', 'MVP scope', 'Delivery estimate', 'Risk register'],
+  },
+  {
+    n: '02', title: 'MVP Development',
+    when: 'For testing the core product with the smallest responsible production scope.',
+    outputs: ['Cross-platform application', 'Authentication', 'Core user journey', 'Basic backend', 'Analytics', 'Selected notifications', 'Admin capability', 'App-store submission'],
+  },
+  {
+    n: '03', title: 'Growth Product',
+    when: 'For products requiring payments, subscriptions, integrations, dashboards, more complex workflows, or expanded user roles.',
+    outputs: ['Payments and subscriptions', 'Deeper integrations', 'Expanded user roles', 'Dashboards', 'More complex workflows'],
+  },
+  {
+    n: '04', title: 'Enterprise or Operational Application',
+    when: 'For security-sensitive, multi-role, offline, device-integrated, high-volume, or business-critical systems requiring deeper architecture and governance.',
+    outputs: ['Hardened security model', 'Multi-role permissions', 'Offline behavior', 'Device integration', 'High-volume architecture', 'Governance and audit'],
+  },
+]
+
+const STACK = [
+  { icon: Smartphone, label: 'Mobile experience' },
+  { icon: Layers, label: 'API and business logic' },
+  { icon: Database, label: 'Database' },
+  { icon: KeyRound, label: 'Authentication' },
+  { icon: LayoutDashboard, label: 'Admin / dashboard' },
+  { icon: CreditCard, label: 'Payments / subscriptions' },
+  { icon: BellRing, label: 'Notifications' },
+  { icon: BarChart3, label: 'Analytics' },
+  { icon: Plug, label: 'External integrations' },
+  { icon: Server, label: 'Infrastructure and deployment' },
+]
+
+const METHOD = [
+  { icon: Compass, title: 'Product Discovery', desc: 'Business case, users, journeys, feature priorities, platform decision, technical constraints, success criteria.' },
+  { icon: PenTool, title: 'Experience Design', desc: 'Information architecture, flows, wireframes, interface system, prototype, accessibility, and approval.' },
+  { icon: DraftingCompass, title: 'Technical Design', desc: 'Architecture, data, APIs, integrations, security, environments, release plan, and risk.' },
+  { icon: Code2, title: 'Development', desc: 'Iterative implementation with defined milestones and review builds.' },
+  { icon: TestTube2, title: 'Quality Assurance', desc: 'Functional, device, responsive, performance, permission, error, analytics, and integration testing.' },
+  { icon: Rocket, title: 'Launch', desc: 'Store assets, submission, production environment, monitoring, documentation, and launch coordination.' },
+  { icon: HeartPulse, title: 'Product Care', desc: 'OS compatibility, defect resolution, monitoring, analytics review, security, and planned improvement.' },
+]
+
+const DELIVERABLE_PHASES = [
+  { phase: 'Planning', items: ['Product requirements', 'Prioritized feature scope', 'User flows', 'Technical plan', 'Delivery milestones', 'Responsibilities', 'Assumptions and exclusions'] },
+  { phase: 'Design', items: ['Interface direction', 'Screen designs', 'Component system', 'Prototype where included', 'Revision checkpoints'] },
+  { phase: 'Development', items: ['Application code', 'Backend and database per scope', 'Integrations', 'Admin tools', 'Analytics', 'Environments', 'Test builds'] },
+  { phase: 'Launch', items: ['App-store preparation and submission', 'Production deployment', 'Documentation', 'Credentials and ownership plan', 'Handover / training', 'Support period'] },
+]
+
+const INVESTMENT_DRIVERS = [
+  'Product-definition depth', 'User roles', 'Journeys', 'Data complexity', 'Backend', 'Payments', 'Subscriptions',
+  'Offline behavior', 'Integrations', 'Native-device capabilities', 'Security', 'Analytics', 'Admin tools',
+  'Testing', 'Launch support', 'Maintenance',
+]
+
+const FAQS = [
+  { q: 'Do you build for iOS and Android?', a: 'Core Conversion uses an appropriate cross-platform or native approach depending on functionality, performance, budget, timeline, and integration requirements.' },
+  { q: 'Can you build only an MVP?', a: 'Yes — but “MVP” means the minimum responsible product required to test the core value, not an incomplete or low-quality version of the full idea.' },
+  { q: 'Can you publish the app for us?', a: 'Store preparation and submission can be included. Approval remains controlled by Apple or Google, and Core Conversion cannot guarantee acceptance.' },
+  { q: 'What happens after launch?', a: 'A care plan can cover compatibility, monitoring, defects, minor updates, and planned improvements. New features are scoped separately unless included.' },
+  { q: 'Who owns the source code?', a: 'Ownership, licensing, repositories, reusable components, third-party code, and payment obligations are defined in the contract.' },
+  { q: 'Can you tell us if an app is the wrong solution?', a: 'Yes. A credible product partner should recommend a website, web application, or smaller validation exercise when that is commercially wiser.' },
+]
+
+/* ─────────────────────────── Helpers (canvas language) ─────────────────────────── */
+
+function Kicker({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
+  return <span className={`inline-block text-xs font-semibold uppercase tracking-[0.24em] mb-4 ${light ? 'text-amber-400' : 'text-amber-700'}`}>{children}</span>
+}
+function InkButton({ href, children, external = false }: { href: string; children: React.ReactNode; external?: boolean }) {
+  const cls = 'group inline-flex items-center justify-center gap-2.5 bg-[#0A1730] hover:bg-[#122548] text-white font-semibold px-7 py-3.5 rounded-lg transition-colors'
+  const inner = <>{children} <ArrowRight className="w-4 h-4 text-amber-400 transition-transform group-hover:translate-x-1" /></>
+  return external ? <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a> : <Link href={href} className={cls}>{inner}</Link>
+}
+function HairlineButton({ href, children, light = false }: { href: string; children: React.ReactNode; light?: boolean }) {
+  const cls = light
+    ? 'inline-flex items-center justify-center gap-2 border border-white/25 text-white hover:border-white/60 font-semibold px-7 py-3.5 rounded-lg transition-colors'
+    : 'inline-flex items-center justify-center gap-2 border cc-rule-md text-[#0A1730] hover:border-[#0A1730] font-semibold px-7 py-3.5 rounded-lg transition-colors'
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 50 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      className={className}
-    >
-      {children}
-    </motion.div>
+    <Link href={href} className={cls}>
+      {children} <ArrowUpRight className="w-4 h-4" />
+    </Link>
   )
 }
 
+/* ─────────────────────────── Page ─────────────────────────── */
+
 export default function MobileAppDevelopmentPage() {
-  const platforms = [
-    {
-      icon: Smartphone,
-      title: 'iOS Development',
-      description: 'Native and cross-platform apps built for the App Store',
-      color: 'from-blue-600 to-cyan-600'
-    },
-    {
-      icon: Smartphone,
-      title: 'Android Development',
-      description: 'Robust apps optimized for the Google Play ecosystem',
-      color: 'from-green-600 to-emerald-600'
-    },
-    {
-      icon: Layers,
-      title: 'Cross-Platform',
-      description: 'Single codebase deployed to both iOS and Android',
-      color: 'from-purple-600 to-pink-600'
-    },
-    {
-      icon: Cloud,
-      title: 'Backend & APIs',
-      description: 'Scalable server infrastructure and integrations',
-      color: 'from-orange-600 to-red-600'
-    }
-  ]
-
-  const features = [
-    { icon: Zap, title: 'High Performance', desc: 'Smooth, responsive user experiences' },
-    { icon: Lock, title: 'Secure by Design', desc: 'Data encryption and privacy compliance' },
-    { icon: Users, title: 'User-Centric', desc: 'Intuitive interfaces users love' },
-    { icon: Layers, title: 'Scalable Architecture', desc: 'Grows with your user base' },
-    { icon: Cloud, title: 'Cloud Integration', desc: 'Seamless backend connectivity' },
-    { icon: Shield, title: 'Tested & Reliable', desc: 'Rigorous QA and testing' }
-  ]
-
-  const technologies = [
-    { name: 'React Native', desc: 'Cross-platform mobile development' },
-    { name: 'Swift', desc: 'Native iOS development' },
-    { name: 'Kotlin', desc: 'Native Android development' },
-    { name: 'Node.js', desc: 'Backend APIs and services' },
-    { name: 'Firebase', desc: 'Real-time database and auth' },
-    { name: 'AWS', desc: 'Cloud infrastructure' }
-  ]
-
-  const appTypes = [
-    'E-commerce & Retail',
-    'Social & Community',
-    'Productivity & Business Tools',
-    'Health & Fitness',
-    'Education & Learning',
-    'Food & Delivery Services',
-    'Finance & Banking',
-    'Entertainment & Media'
-  ]
-
-  const process = [
-    {
-      title: 'Strategy & Planning',
-      description: 'Define goals, features, and user flows'
-    },
-    {
-      title: 'UI/UX Design',
-      description: 'Create beautiful, intuitive interfaces'
-    },
-    {
-      title: 'Development',
-      description: 'Build with clean code and best practices'
-    },
-    {
-      title: 'Testing & QA',
-      description: 'Ensure quality across devices and scenarios'
-    },
-    {
-      title: 'Launch & Support',
-      description: 'Deploy to app stores and provide ongoing maintenance'
-    }
-  ]
-
-  const benefits = [
-    'Native and cross-platform solutions',
-    'Intuitive, user-friendly interfaces',
-    'Secure data handling and encryption',
-    'Scalable backend architecture',
-    'Push notifications and real-time updates',
-    'Analytics and user behavior tracking',
-    'App Store optimization',
-    'Ongoing maintenance and updates'
-  ]
+  const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   return (
-    <div className="relative overflow-hidden">
-      <section className="relative min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 pt-32 pb-16 overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-20 right-20 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-        </div>
+    <div className="relative overflow-hidden cc-canvas text-[#0A1730]">
 
-        <div className="container-custom relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-block mb-6"
-            >
-              <span className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-semibold rounded-full shadow-lg">
-                Mobile App Development
-              </span>
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-blue-800 to-cyan-800 bg-clip-text text-transparent leading-tight"
-            >
-              Mobile Apps That Scale
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-xl md:text-2xl text-gray-600 mb-8 leading-relaxed"
-            >
-              Modern, secure mobile applications with architecture that supports feature expansion and business growth. Built for performance and user engagement.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <a href="/contact" className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
-                Start Your App Project
-              </a>
-            </motion.div>
-          </div>
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
-      </section>
-
-      <section className="py-24 bg-white">
-        <div className="container-custom">
-          <div className="max-w-5xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-16 text-gray-900 text-center">
-                Platform Expertise
-              </h2>
-            </AnimatedSection>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {platforms.map((platform, index) => {
-                const Icon = platform.icon
-                return (
-                  <AnimatedSection key={index}>
-                    <div className="h-full p-8 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-xl transition-all duration-300 group">
-                      <div className={`w-16 h-16 bg-gradient-to-br ${platform.color} rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                        <Icon className="w-8 h-8 text-white" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-3">{platform.title}</h3>
-                      <p className="text-gray-600 leading-relaxed text-lg">{platform.description}</p>
-                    </div>
-                  </AnimatedSection>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 bg-gradient-to-br from-blue-50 via-white to-cyan-50">
-        <div className="container-custom">
-          <div className="max-w-6xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 text-center">
-                Why Our Apps Stand Out
-              </h2>
-              <p className="text-xl text-gray-600 mb-16 text-center">
-                Built with user experience, performance, and security in mind
+      {/* ══════════ 1 · HERO — real product ecosystem ══════════ */}
+      <section className="relative border-b cc-rule">
+        <div className="container-custom pt-36 pb-20 lg:pt-44 lg:pb-24">
+          <div className="grid lg:grid-cols-[1.02fr_0.98fr] gap-14 lg:gap-16 items-center">
+            <div>
+              <Kicker>Mobile App Development</Kicker>
+              <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-bold leading-[1.06] tracking-tight text-[#0A1730]">
+                Build a Mobile Product With a Clear Business Role.
+              </h1>
+              <p className="mt-7 text-lg md:text-xl text-slate-600 leading-relaxed max-w-xl">
+                Core Conversion designs and develops customer-facing applications, operational tools, and digital
+                products supported by the right product logic, backend architecture, integrations, analytics, and launch plan.
               </p>
-            </AnimatedSection>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {features.map((feature, index) => {
-                const Icon = feature.icon
-                return (
-                  <AnimatedSection key={index}>
-                    <div className="h-full p-6 bg-white rounded-2xl border border-gray-200 hover:border-blue-400 hover:shadow-xl transition-all duration-300 group">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                        <Icon className="w-6 h-6 text-white" />
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">{feature.title}</h3>
-                      <p className="text-gray-600 leading-relaxed">{feature.desc}</p>
-                    </div>
-                  </AnimatedSection>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 bg-white">
-        <div className="container-custom">
-          <div className="max-w-5xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 text-center">
-                Technology Stack
-              </h2>
-              <p className="text-xl text-gray-600 mb-16 text-center">
-                Modern frameworks and tools for robust mobile applications
+              <p className="mt-5 flex items-start gap-3 text-base text-slate-800 max-w-xl">
+                <span className="h-px w-8 bg-amber-500 shrink-0 mt-3" />
+                The objective is not simply to publish an app. It is to build a product people can use and the business can support.
               </p>
-            </AnimatedSection>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {technologies.map((tech, index) => (
-                <AnimatedSection key={index}>
-                  <div className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{tech.name}</h3>
-                    <p className="text-gray-600">{tech.desc}</p>
-                  </div>
-                </AnimatedSection>
-              ))}
+              <div className="mt-9 flex flex-col sm:flex-row gap-4">
+                <InkButton href={CAL} external>Discuss Your App</InkButton>
+                <HairlineButton href="/portfolio">View App Work</HairlineButton>
+              </div>
             </div>
+
+            {/* real QR Seal product screens — the ecosystem, not floating mockups */}
+            <Reveal delay={0.1}>
+              <div className="relative">
+                <div className="flex items-end justify-center gap-4">
+                  {['qrseal-app-1.png', 'qrseal-app-2.png', 'qrseal-app-3.png'].map((f, i) => (
+                    <img key={f} src={`/portfolio/apps/${f}`} alt="QR Seal mobile product screen" loading="eager"
+                      className={`w-[27%] rounded-2xl border cc-rule-md shadow-[0_24px_50px_-24px_rgba(10,23,48,0.4)] bg-white ${i === 1 ? 'translate-y-0' : 'translate-y-5'}`} />
+                  ))}
+                </div>
+                <div className="mt-7 mx-auto max-w-md rounded-xl bg-white border cc-rule-md px-5 py-3.5 flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-slate-600">QR Seal — a real client product</span>
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-amber-700">App · Web · Backend</span>
+                </div>
+                <p className="mt-3 text-center text-xs text-slate-400 tracking-wide">FIG. 01 — the visible screens are one layer of a complete product system.</p>
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
-      <section className="py-24 bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+      {/* ══════════ 2 · AN APP MUST EARN ITS PLACE — the decision ledger ══════════ */}
+      <section className="cc-canvas-white border-b cc-rule py-24 md:py-28">
         <div className="container-custom">
-          <div className="max-w-5xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-16 text-gray-900 text-center">
-                App Types We Build
-              </h2>
-            </AnimatedSection>
+          <Reveal className="max-w-3xl mb-12">
+            <Kicker>The Decision</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.1] text-[#0A1730]">
+              Not Every Business Needs a Mobile App.
+            </h2>
+            <p className="mt-5 text-lg text-slate-600 leading-relaxed">
+              A mobile app is justified when it creates meaningful value that a normal website cannot provide as effectively.
+            </p>
+          </Reveal>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {appTypes.map((type, index) => (
-                <AnimatedSection key={index}>
-                  <div className="p-6 bg-white rounded-2xl border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300 text-center group">
-                    <p className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{type}</p>
-                  </div>
-                </AnimatedSection>
-              ))}
+          {/* two-column ledger, divided by a single ink rule */}
+          <Reveal>
+            <div className="grid md:grid-cols-2 rounded-xl border cc-rule-md overflow-hidden bg-white">
+              <div className="p-8 md:p-10">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700 mb-5">An app earns its place when</p>
+                <ul className="space-y-3">
+                  {APP_YES.map((t) => (
+                    <li key={t} className="flex gap-3 text-[15.5px] text-slate-700 leading-relaxed">
+                      <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 shrink-0 mt-0.5" style={{ width: 18, height: 18 }} />{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="p-8 md:p-10 border-t md:border-t-0 md:border-l cc-rule-md cc-canvas-alt">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-700 mb-5">Consider a web platform instead when</p>
+                <ul className="space-y-3">
+                  {APP_NO.map((t) => (
+                    <li key={t} className="flex gap-3 text-[15.5px] text-slate-700 leading-relaxed">
+                      <AlertCircle className="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" style={{ width: 18, height: 18 }} />{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-          </div>
+          </Reveal>
+
+          <Reveal className="mt-8">
+            <p className="border-l-2 border-amber-500 pl-5 text-[17px] font-semibold text-[#0A1730] leading-snug max-w-3xl">
+              Core Conversion will recommend a web solution when it creates a better commercial outcome than an app.
+            </p>
+          </Reveal>
         </div>
       </section>
 
-      <section className="py-24 bg-white">
+      {/* ══════════ 3 · PRODUCT DEFINITION — the boardroom brief ══════════ */}
+      <section className="cc-canvas-alt border-b cc-rule py-24 md:py-28">
         <div className="container-custom">
-          <div className="max-w-4xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 text-center">
-                Development Process
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+            <Reveal className="lg:sticky lg:top-28">
+              <Kicker>Before Development</Kicker>
+              <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.1] text-[#0A1730]">
+                Development Should Begin After the Product Is Defined.
               </h2>
-              <p className="text-xl text-gray-600 mb-16 text-center">
-                From concept to App Store
+              <p className="mt-6 text-[17px] text-slate-600 leading-relaxed max-w-md">
+                These questions define whether the first release should be a prototype, MVP, production application, or a
+                web platform.
               </p>
-            </AnimatedSection>
-
-            <div className="space-y-6">
-              {process.map((step, index) => (
-                <AnimatedSection key={index}>
-                  <div className="flex items-start gap-6 p-8 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-xl transition-all duration-300 group">
-                    <div className="flex-shrink-0">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold text-xl group-hover:scale-110 transition-transform duration-300">
-                        {index + 1}
-                      </div>
+            </Reveal>
+            <Reveal delay={0.05}>
+              {/* the product brief as a formal document */}
+              <div className="cc-canvas-white rounded-xl border cc-rule-md shadow-[0_18px_50px_-30px_rgba(10,23,48,0.3)]">
+                <div className="flex items-center justify-between px-8 py-5 border-b cc-rule-md">
+                  <span className="text-xs font-bold uppercase tracking-[0.22em] text-[#0A1730]">Product Brief</span>
+                  <span className="text-[11px] text-slate-400 tracking-widest">TO BE COMPLETED IN DISCOVERY</span>
+                </div>
+                <dl className="divide-y divide-[rgba(10,23,48,0.07)]">
+                  {BRIEF.map((b, i) => (
+                    <div key={b.field} className="px-8 py-5 grid sm:grid-cols-[170px_1fr] gap-1.5 sm:gap-6">
+                      <dt className="text-[13px] font-bold text-amber-700 uppercase tracking-wide pt-0.5">{String(i + 1).padStart(2, '0')} · {b.field}</dt>
+                      <dd className="text-[15.5px] text-slate-700 leading-relaxed">{b.q}</dd>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{step.title}</h3>
-                      <p className="text-gray-600 leading-relaxed text-lg">{step.description}</p>
-                    </div>
-                  </div>
-                </AnimatedSection>
-              ))}
-            </div>
+                  ))}
+                </dl>
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
-      <section className="py-24 bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+      {/* ══════════ 4 · ENGAGEMENT PATHS — four chapters ══════════ */}
+      <section className="cc-canvas border-b cc-rule py-24 md:py-28">
         <div className="container-custom">
-          <div className="max-w-4xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-16 text-gray-900 text-center">
-                What's Included
+          <Reveal className="max-w-3xl mb-14">
+            <Kicker>Engagement Paths</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.1] text-[#0A1730]">
+              From Validation to Enterprise — Scoped by Journeys, Not Screens.
+            </h2>
+          </Reveal>
+          <div className="space-y-6">
+            {PATHS.map((p, i) => (
+              <Reveal key={p.n}>
+                <div className={`grid lg:grid-cols-[140px_1fr_1.1fr] gap-6 lg:gap-10 rounded-xl border cc-rule p-8 md:p-10 ${i % 2 ? 'cc-canvas-white' : 'bg-white/60'}`}>
+                  <div className="text-6xl md:text-7xl font-extralight text-slate-200 leading-none tabular-nums">{p.n}</div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#0A1730]">{p.title}</h3>
+                    <p className="mt-3 text-[16px] text-slate-600 leading-relaxed">{p.when}</p>
+                  </div>
+                  <div className="lg:border-l cc-rule lg:pl-10">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">Possible outputs</p>
+                    <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+                      {p.outputs.map((o) => (
+                        <li key={o} className="flex gap-2.5 text-[14.5px] text-slate-700"><span className="text-amber-600 mt-px">—</span>{o}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal className="mt-8">
+            <p className="text-[15px] text-slate-500 italic">
+              We do not market “unlimited screens.” Scope is based on user journeys, functionality, complexity,
+              integrations, and quality requirements.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ══════════ 5 · ARCHITECTURE — the app is one layer ══════════ */}
+      <section className="cc-noir py-24 md:py-28">
+        <div className="container-custom">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <Reveal>
+              <Kicker light>Product &amp; Technical Architecture</Kicker>
+              <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.1] text-white">
+                The App Is Only One Part of the Product.
               </h2>
-            </AnimatedSection>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {benefits.map((benefit, index) => (
-                <AnimatedSection key={index}>
-                  <div className="flex items-start gap-4 p-6 bg-white rounded-2xl border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300 group">
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <CheckCircle2 className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
-                    <p className="text-lg text-gray-700 leading-relaxed pt-1">{benefit}</p>
+              <p className="mt-5 text-[17px] text-slate-300 leading-relaxed max-w-xl">
+                A reliable mobile product may require backend services, data models, user permissions, administration,
+                integrations, analytics, billing, support workflows, and release management. The proposal must define the
+                complete system — not only the visible screens.
+              </p>
+            </Reveal>
+            <Reveal delay={0.08}>
+              {/* layered stack — the visible screen sits on nine invisible layers */}
+              <div className="max-w-md mx-auto lg:mx-0 lg:ml-auto w-full">
+                {STACK.map(({ icon: Icon, label }, i) => (
+                  <div key={label}
+                    className={`flex items-center gap-4 border cc-rule px-5 py-3 ${i === 0 ? 'bg-[#0A1730] text-white rounded-t-xl' : 'bg-white text-slate-700'} ${i === STACK.length - 1 ? 'rounded-b-xl' : 'border-b-0'}`}
+                    style={{ marginLeft: i === 0 ? 0 : Math.min(i * 2, 10) }}>
+                    <Icon className={`w-4.5 h-4.5 shrink-0 ${i === 0 ? 'text-amber-400' : 'text-[#0A1730]'}`} style={{ width: 18, height: 18 }} />
+                    <span className="text-[14px] font-semibold">{label}</span>
+                    {i === 0 && <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-amber-400">Visible layer</span>}
                   </div>
-                </AnimatedSection>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
-      <section className="py-24 bg-white">
+      {/* ══════════ 6 · THE APP METHOD — one pipeline ══════════ */}
+      <section className="cc-canvas-alt border-b cc-rule py-24 md:py-28">
         <div className="container-custom">
-          <div className="max-w-4xl mx-auto">
-            <AnimatedSection>
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 md:p-12 border border-blue-200">
-                <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
-                  Apps Built to Last
-                </h2>
-                <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                  We build mobile applications with scalable architecture, clean code, and user-centric design. Whether you need a native iOS app, Android app, or cross-platform solution, we deliver apps that users love and businesses rely on.
-                </p>
-                <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                  With 15 years of technical experience, our founder John Paul Carrasco ensures every app is built with performance, security, and maintainability at its core.
-                </p>
-                <Link href="/about" className="inline-flex items-center text-blue-600 font-semibold hover:text-cyan-600 transition-colors text-lg">
-                  Learn more about CCOMS <ArrowRight className="ml-2 w-5 h-5" />
+          <Reveal className="max-w-3xl mb-16">
+            <Kicker>The Core Conversion App Method</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.1] text-[#0A1730]">
+              One Development Pipeline, From Discovery to Care.
+            </h2>
+          </Reveal>
+          <div className="relative">
+            <span className="absolute left-[27px] top-3 bottom-3 w-px bg-gradient-to-b from-amber-500 via-[rgba(10,23,48,0.15)] to-amber-500" aria-hidden />
+            <ol className="space-y-10">
+              {METHOD.map(({ icon: Icon, title, desc }, i) => (
+                <Reveal key={title}>
+                  <li className="relative pl-20">
+                    <span className="absolute left-0 top-0 w-14 h-14 rounded-full bg-white border cc-rule-md flex items-center justify-center shadow-sm">
+                      <Icon className="w-6 h-6 text-[#0A1730]" />
+                    </span>
+                    <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-700">Stage {i + 1}</span>
+                    <h3 className="text-xl md:text-2xl font-bold text-[#0A1730] mt-1">{title}</h3>
+                    <p className="mt-2 text-[16px] text-slate-600 leading-relaxed max-w-2xl">{desc}</p>
+                  </li>
+                </Reveal>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 7 · WHAT THE CLIENT RECEIVES ══════════ */}
+      <section className="cc-canvas border-b cc-rule py-24 md:py-28">
+        <div className="container-custom">
+          <Reveal className="max-w-3xl mb-12">
+            <Kicker>What the Client Receives</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.1] text-[#0A1730]">
+              Deliverables Across the Product Lifecycle.
+            </h2>
+          </Reveal>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {DELIVERABLE_PHASES.map((p, i) => (
+              <Reveal key={p.phase} delay={(i % 4) * 0.06}>
+                <div className="h-full cc-canvas-white rounded-xl border cc-rule p-7">
+                  <div className="flex items-baseline justify-between border-b cc-rule pb-4 mb-4">
+                    <h3 className="text-lg font-bold text-[#0A1730]">{p.phase}</h3>
+                    <span className="text-[11px] font-bold text-amber-700 tracking-widest">PHASE {i + 1}</span>
+                  </div>
+                  <ul className="space-y-2.5">
+                    {p.items.map((it) => (
+                      <li key={it} className="flex gap-2.5 text-[14.5px] text-slate-700 leading-snug"><CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />{it}</li>
+                    ))}
+                  </ul>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal className="mt-8">
+            <p className="text-[15px] text-slate-600 leading-relaxed max-w-3xl border-l-2 border-amber-500 pl-4">
+              Source-code access, repositories, third-party accounts, paid licenses, store fees, hosting, maintenance, and
+              intellectual-property ownership are specified contractually.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ══════════ 8 · REAL PRODUCT PROOF — QR Seal ══════════ */}
+      <section className="cc-canvas-white border-b cc-rule py-24 md:py-28">
+        <div className="container-custom">
+          <Reveal className="max-w-3xl mb-12">
+            <Kicker>Real Product Proof</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.1] text-[#0A1730]">
+              QR Seal — A Complete Product System, Built End to End.
+            </h2>
+          </Reveal>
+          <Reveal>
+            <div className="grid lg:grid-cols-[0.9fr_1.1fr] rounded-xl border cc-rule-md overflow-hidden bg-white">
+              <div className="cc-canvas-alt p-8 md:p-10 flex flex-col items-center justify-center gap-6">
+                <div className="flex items-end justify-center gap-3">
+                  {['qrseal-app-1.png', 'qrseal-app-2.png'].map((f) => (
+                    <img key={f} src={`/portfolio/apps/${f}`} alt="QR Seal app screen" loading="lazy" className="w-32 md:w-36 rounded-xl border cc-rule-md shadow-lg bg-white" />
+                  ))}
+                </div>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Real product screens · released and operational</span>
+              </div>
+              <div className="p-8 md:p-11 flex flex-col justify-center">
+                <dl className="space-y-5">
+                  <div>
+                    <dt className="font-semibold text-slate-400 uppercase tracking-wide text-[11px] mb-1">Business Problem &amp; Product Role</dt>
+                    <dd className="text-[16.5px] text-slate-700 leading-relaxed">Premium brands needed QR touchpoints that strengthen identity and security — not generic black-and-white utilities. The mobile app is the “Key” in a dual-platform ecosystem; the web platform is the “Vault.”</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-slate-400 uppercase tracking-wide text-[11px] mb-1">User Journey &amp; Backend Capability</dt>
+                    <dd className="text-[16.5px] text-slate-700 leading-relaxed">Generate dynamic, brand-styled QR codes in seconds; edit destinations after printing; track scans, locations, and devices per code — powered by a custom API engine, server-side verification, and a subscription platform.</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-amber-700 uppercase tracking-wide text-[11px] mb-1">Key Implementation Decisions &amp; Status</dt>
+                    <dd className="text-lg text-[#0A1730] font-bold leading-snug">A synchronized app + web architecture with tamper-proof, server-verified codes — live as a working SaaS ecosystem with mobile and web execution.</dd>
+                  </div>
+                </dl>
+                <Link href="/portfolio" className="inline-flex items-center gap-2 text-[#0A1730] font-semibold mt-8 hover:gap-3 transition-all">
+                  View the QR Seal Project <ArrowRight className="w-4 h-4 text-amber-600" />
                 </Link>
               </div>
-            </AnimatedSection>
-          </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      <section className="py-24 bg-gradient-to-br from-blue-600 via-cyan-600 to-blue-700 text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMyIvPjwvZz48L3N2Zz4=')] opacity-30"></div>
+      {/* ══════════ 9 · INVESTMENT LOGIC ══════════ */}
+      <section className="cc-canvas-alt border-b cc-rule py-24 md:py-28">
+        <div className="container-custom">
+          <Reveal className="max-w-5xl mx-auto">
+            <div className="rounded-2xl border cc-rule-md overflow-hidden grid lg:grid-cols-2 bg-white">
+              <div className="p-9 md:p-12">
+                <Kicker>Investment Logic</Kicker>
+                <h2 className="text-3xl md:text-4xl font-bold leading-[1.12] text-[#0A1730]">
+                  Priced by the Product, Not the Screen Count.
+                </h2>
+                <p className="mt-5 text-[16.5px] text-slate-600 leading-relaxed">
+                  Ranges for product validation, MVP, growth products, enterprise applications, and monthly product care
+                  are shared during discovery, once the product case and system requirements are understood.
+                </p>
+                <div className="mt-7"><InkButton href={CAL} external>Scope Your Product</InkButton></div>
+              </div>
+              <div className="cc-canvas p-9 md:p-12 border-t lg:border-t-0 lg:border-l cc-rule">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-700 mb-5">What drives the investment</p>
+                <div className="flex flex-wrap gap-2">
+                  {INVESTMENT_DRIVERS.map((f) => (
+                    <span key={f} className="rounded-full bg-white border cc-rule-md px-3.5 py-1.5 text-[13.5px] font-medium text-slate-700">{f}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </div>
+      </section>
 
-        <div className="container-custom relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
-                Ready to launch your app?
+      {/* ══════════ 10 · FAQs ══════════ */}
+      <section className="cc-canvas-white border-b cc-rule py-24 md:py-28">
+        <div className="container-custom">
+          <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-16 items-start">
+            <Reveal className="lg:sticky lg:top-28">
+              <Kicker>Decision Support</Kicker>
+              <h2 className="text-3xl md:text-4xl font-bold leading-[1.12] text-[#0A1730]">
+                Questions Before You Commission a Product.
               </h2>
-
-              <p className="text-xl text-blue-100 mb-12 leading-relaxed">
-                Let's discuss your vision and create a mobile app that drives user engagement and business growth.
-              </p>
-
-              <a href="/contact" className="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
-                Start Your App Project
-              </a>
-            </AnimatedSection>
+            </Reveal>
+            <Reveal delay={0.05} className="divide-y divide-[rgba(10,23,48,0.1)] border-y cc-rule-md">
+              {FAQS.map((f, i) => {
+                const open = openFaq === i
+                return (
+                  <div key={f.q}>
+                    <button onClick={() => setOpenFaq(open ? null : i)} aria-expanded={open} className="w-full flex items-start justify-between gap-6 text-left py-6 group">
+                      <span className="text-lg font-semibold text-[#0A1730] group-hover:text-amber-700 transition-colors">{f.q}</span>
+                      <span className="w-7 h-7 rounded-full border cc-rule-md flex items-center justify-center shrink-0 mt-0.5 text-slate-500 group-hover:border-amber-500 group-hover:text-amber-700 transition-colors">
+                        {open ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      </span>
+                    </button>
+                    <div className={`grid transition-all duration-300 ease-out ${open ? 'grid-rows-[1fr] opacity-100 pb-6' : 'grid-rows-[0fr] opacity-0'}`}>
+                      <div className="overflow-hidden"><p className="text-[16px] text-slate-600 leading-relaxed max-w-2xl">{f.a}</p></div>
+                    </div>
+                  </div>
+                )
+              })}
+            </Reveal>
           </div>
         </div>
       </section>
 
-      <style jsx>{`
-        @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-      `}</style>
+      {/* ══════════ 11 · FINAL CTA ══════════ */}
+      <section className="cc-noir py-28 md:py-32">
+        <div className="container-custom">
+          <Reveal className="max-w-3xl mx-auto text-center">
+            <span className="block h-10 w-px bg-amber-400 mx-auto mb-8" aria-hidden />
+            <Kicker light>Next Step</Kicker>
+            <h2 className="text-3xl md:text-5xl font-bold leading-[1.1] text-white">
+              Start With the Product Case — Not the Screen Count.
+            </h2>
+            <p className="mt-6 text-lg md:text-xl text-slate-300 leading-relaxed">
+              We will help clarify the user, business objective, required system, first-release scope, risks, and the most
+              appropriate platform.
+            </p>
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+              <a href={CAL} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center justify-center gap-2.5 bg-amber-400 hover:bg-amber-300 text-[#0B0C10] font-semibold px-7 py-3.5 rounded-lg transition-colors">
+                Discuss Your App Idea <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </a>
+              <HairlineButton href="/portfolio" light>View the QR Seal Project</HairlineButton>
+            </div>
+          </Reveal>
+        </div>
+      </section>
     </div>
   )
 }

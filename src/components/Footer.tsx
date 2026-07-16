@@ -8,9 +8,10 @@ export default function Footer() {
   const currentYear = new Date().getFullYear()
 
   const services = [
+    { href: '/services/digital-marketing-services', label: 'Digital Marketing Services' },
     { href: '/services/seo', label: 'Full-Service SEO' },
     { href: '/services/local-seo', label: 'Local SEO' },
-    { href: '/services/geo', label: 'GEO' },
+    { href: '/services/geo', label: 'GEO & AI Search' },
     { href: '/services/website-development', label: 'Website Development' },
     { href: '/services/mobile-app-development', label: 'Mobile Apps' },
   ]
@@ -27,8 +28,8 @@ export default function Footer() {
       <div className="container-custom section-padding">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={false}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
@@ -61,8 +62,8 @@ export default function Footer() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={false}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
             viewport={{ once: true }}
           >
@@ -82,8 +83,8 @@ export default function Footer() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={false}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             viewport={{ once: true }}
           >
@@ -103,8 +104,8 @@ export default function Footer() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={false}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
             viewport={{ once: true }}
           >

@@ -24,6 +24,20 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body className={`${inter.className} bg-white text-neutral-900 antialiased`}>
         {children}
+        {/* Google tag (gtag.js) — GA4. Makes window.gtag/dataLayer real so track() events land in GA4. */}
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-NJKNDWT03G" strategy="afterInteractive" />
+        <Script
+          id="ga4-gtag"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-NJKNDWT03G');
+            `,
+          }}
+        />
         <Script
           id="facebook-pixel"
           strategy="afterInteractive"

@@ -1,433 +1,654 @@
 'use client'
 
-import { useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, ArrowRight, TrendingUp, Search, BarChart3, Target, Zap, Shield } from 'lucide-react'
+import { Reveal } from '@/components/Reveal'
+import { track, CCEvent } from '@/lib/track'
+import {
+  ArrowRight, ArrowUpRight, Plus, Minus, Search, FileSearch, Landmark, MousePointerClick,
+  ServerCog, Network, FileText, TrendingUp, Link2, Target, LineChart, ShieldCheck,
+} from 'lucide-react'
 
-function AnimatedSection({ children, className = "" }: { children: React.ReactNode, className?: string }) {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
+const CAL = 'https://calendly.com/ccoms/discovery-call'
 
+/* ─────────────────────────── Data ─────────────────────────── */
+
+const INTENTS = [
+  { stage: 'Problem Awareness', icon: Search, desc: 'Customers search for symptoms, challenges, comparisons, or ways to solve a problem.', example: 'Early — shapes the shortlist' },
+  { stage: 'Solution Research', icon: FileSearch, desc: 'Customers investigate service types, product categories, processes, costs, alternatives, and expected results.', example: 'Middle — builds preference' },
+  { stage: 'Provider Evaluation', icon: Landmark, desc: 'Customers compare businesses, expertise, proof, reviews, locations, and fit.', example: 'Late — decides the shortlist' },
+  { stage: 'Transaction or Inquiry', icon: MousePointerClick, desc: 'Customers search with strong intent to contact, book, buy, apply, or request a quotation.', example: 'Now — converts to revenue' },
+]
+
+const UNDERPERFORM = [
+  'The keyword list does not reflect the business model.',
+  'Technical problems prevent crawling, indexing, speed, or usability.',
+  'Multiple pages compete for the same topic.',
+  'Content exists without a coherent architecture.',
+  'Pages target traffic but not customer intent.',
+  'Authority work is weak, risky, irrelevant, or poorly documented.',
+  'The website cannot convert relevant traffic.',
+  'Reporting celebrates impressions without business interpretation.',
+  'The strategy is not updated as competitors and search behavior change.',
+]
+
+const AUDIT_DIMENSIONS = [
+  {
+    title: 'Business & Search Demand',
+    lead: 'The strategy must start from the business — not from a keyword tool.',
+    items: ['Business model', 'Priority services & products', 'Markets', 'Customers', 'Margins & value', 'Seasonality', 'Sales cycle', 'Search demand', 'Competitive landscape'],
+  },
+  {
+    title: 'Technical Foundation',
+    lead: 'If search engines cannot reliably access and interpret the site, nothing above it compounds.',
+    items: ['Crawlability', 'Indexation', 'Architecture', 'Redirects', 'Canonicals', 'Performance', 'Mobile usability', 'Structured data', 'Rendering', 'Duplication', 'International & e-commerce requirements'],
+  },
+  {
+    title: 'Content & Relevance',
+    lead: 'Every important page needs a purpose, an intent, and a reason to be chosen.',
+    items: ['Topic coverage', 'Page purpose', 'Keyword & intent alignment', 'Content quality', 'Freshness', 'Internal linking', 'Cannibalization', 'E-E-A-T evidence', 'Conversion support'],
+  },
+  {
+    title: 'Authority & Trust',
+    lead: 'Authority is earned evidence that the business deserves visibility.',
+    items: ['Backlink profile', 'Brand signals', 'Mentions', 'Reputation', 'Link risk', 'Citation opportunities', 'Proof', 'Author & organization clarity'],
+  },
+  {
+    title: 'Measurement',
+    lead: 'What cannot be interpreted cannot be improved with confidence.',
+    items: ['Analytics', 'Search Console', 'Conversion events', 'Landing-page behavior', 'Lead-source visibility', 'Ranking & visibility trends', 'Attribution limitations'],
+  },
+]
+
+const FLYWHEEL = [
+  { icon: ServerCog, title: 'Technical Reliability', desc: 'Ensure the search platform can access, interpret, and serve the right pages efficiently.' },
+  { icon: Network, title: 'Search & Content Architecture', desc: 'Map business priorities, customer intent, pages, topics, and internal relationships.' },
+  { icon: Target, title: 'High-Value Page Improvement', desc: 'Strengthen service, category, product, location, comparison, and conversion pages before producing volume content.' },
+  { icon: FileText, title: 'Authority Content', desc: 'Create credible resources that support topical depth, customer education, internal linking, and discoverability.' },
+  { icon: Link2, title: 'Authority Development', desc: 'Pursue relevant mentions, links, partnerships, citations, digital PR, and trust signals through defensible methods.' },
+  { icon: MousePointerClick, title: 'Conversion Alignment', desc: 'Ensure organic visitors receive a clear message, proof, and next step.' },
+  { icon: LineChart, title: 'Measurement & Iteration', desc: 'Review visibility, page performance, conversions, market shifts, and constraints to prioritize the next work.' },
+]
+
+const INITIAL_OUTPUTS = ['Search & business assessment', 'Technical audit', 'Competitor & search landscape', 'Keyword & intent model', 'Page & content map', 'Priority roadmap', 'Measurement plan']
+const ONGOING_OUTPUTS = ['Technical fixes', 'Page optimization', 'New page briefs or content', 'Internal linking', 'Schema', 'Content updates', 'Authority development', 'Monitoring', 'Search-performance interpretation', 'Priority backlog', 'Growth review']
+
+const PROOF_CASES = [
+  {
+    img: '/case-studies/proofs/real-estate-proof-1.png',
+    sector: 'Real Estate',
+    context: 'A property business competing for high-value, non-brand search demand in a saturated market.',
+    work: 'Technical cleanup, search architecture around priority developments, and content aligned to buyer intent.',
+    note: 'Search Console evidence with date ranges is presented in the full case study, including its limitations.',
+  },
+  {
+    img: '/case-studies/proofs/legal-proof-1.png',
+    sector: 'Legal Services',
+    context: 'A practice whose expertise was not visible for the case types it most wanted.',
+    work: 'Practice-area page architecture, intent-matched content, and authority signals built around real credentials.',
+    note: 'Visibility screenshots are shown with the period they cover — not as a promise of future rankings.',
+  },
+  {
+    img: '/case-studies/proofs/pharma-proof-1.png',
+    sector: 'E-Commerce / Peptides',
+    context: 'A regulated-adjacent catalog where category and product pages had to carry the ranking load.',
+    work: 'Category architecture, product-page relevance, technical performance, and conversion-aligned landing work.',
+    note: 'E-commerce attribution is imperfect; measured outcomes and directional signals are labeled separately.',
+  },
+]
+
+const MEASURE_AREAS = [
+  'Visibility for priority topics', 'Impressions and clicks', 'Qualified organic sessions', 'Landing-page performance',
+  'Inquiries or transactions', 'Non-brand and brand discovery', 'Conversion rate', 'Assisted conversions where measurable',
+  'Technical health', 'Content contribution', 'Authority progress', 'Competitor movement',
+]
+
+const ENGAGEMENTS = [
+  'Technical recovery', 'Search foundation', 'Ongoing SEO growth', 'E-commerce SEO',
+  'B2B / content-led SEO', 'Migration support', 'Site-redesign SEO', 'Multi-market SEO',
+]
+
+const INVESTMENT_DRIVERS = [
+  'Website size', 'Technical condition', 'Market competition', 'Geography', 'Content needs',
+  'Authority gap', 'Internal client resources', 'Implementation responsibility', 'Reporting & coordination', 'Speed of execution',
+]
+
+const FAQS = [
+  { q: 'How long does SEO take?', a: 'The time to meaningful progress depends on starting condition, competition, website authority, technical constraints, content quality, implementation speed, and market demand. The proposal defines expected milestones rather than promising a guaranteed ranking date.' },
+  { q: 'Do you guarantee Page One rankings?', a: 'No. Search engines control results, competitors continue working, and algorithms change. Core Conversion can commit to the approved strategy, execution, transparency, and measurement — not a guaranteed position.' },
+  { q: 'How many articles are included?', a: 'Content quantity follows the roadmap. Publishing more articles is not always the highest-value action.' },
+  { q: 'Do you build backlinks?', a: 'Authority development may include relevant links, mentions, partnerships, citations, outreach, and digital PR. The methods, risks, and expectations are always transparent.' },
+  { q: 'Can SEO work with a limited budget?', a: 'Yes, but scope and pace must be realistic. The first phase focuses on the highest-impact constraints and commercially important pages.' },
+  { q: 'Is website development included?', a: 'Technical and content changes may be included within defined limits. Major redesigns, new systems, and extensive development are scoped separately or combined into an integrated engagement.' },
+]
+
+/* ─────────────────────────── Helpers ─────────────────────────── */
+
+function Kicker({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
+  return <span className={`inline-block text-xs font-semibold uppercase tracking-[0.24em] mb-4 ${light ? 'text-amber-400' : 'text-amber-700'}`}>{children}</span>
+}
+
+function InkButton({ href, children, external = false, event }: { href: string; children: React.ReactNode; external?: boolean; event?: string }) {
+  const cls = 'group inline-flex items-center justify-center gap-2.5 bg-[#0A1730] hover:bg-[#122548] text-white font-semibold px-7 py-3.5 rounded-lg transition-colors'
+  const inner = <>{children} <ArrowRight className="w-4 h-4 text-amber-400 transition-transform group-hover:translate-x-1" /></>
+  const onClick = () => event && track(event, { page: 'seo' })
+  return external
+    ? <a href={href} target="_blank" rel="noopener noreferrer" className={cls} onClick={onClick}>{inner}</a>
+    : <Link href={href} className={cls} onClick={onClick}>{inner}</Link>
+}
+
+function HairlineButton({ href, children, light = false }: { href: string; children: React.ReactNode; light?: boolean }) {
+  const cls = light
+    ? 'inline-flex items-center justify-center gap-2 border border-white/25 text-white hover:border-white/60 font-semibold px-7 py-3.5 rounded-lg transition-colors'
+    : 'inline-flex items-center justify-center gap-2 border cc-rule-md text-[#0A1730] hover:border-[#0A1730] font-semibold px-7 py-3.5 rounded-lg transition-colors'
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 50 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      className={className}
-    >
-      {children}
-    </motion.div>
+    <Link href={href} className={cls} onClick={() => track(CCEvent.secondaryCta, { page: 'seo', to: href })}>
+      {children} <ArrowUpRight className="w-4 h-4" />
+    </Link>
   )
 }
 
-export default function SEOPage() {
-  const targetAudience = [
-    'You\'ve paid for SEO before and saw little to no improvement',
-    'Rankings were volatile, traffic was irrelevant, or conversions didn\'t improve',
-    'Your site has technical issues nobody fixed (speed, indexing, tracking, structure)',
-    'Your agency kept "planning" while output stayed thin',
-    'You suspect work was outsourced and nobody owned the outcome',
-    'You\'re ready for consistent execution tied to measurable business results'
-  ]
+/* Hero — demand flows through a system into measured action */
+function HeroFlow() {
+  const stages = ['Search demand', 'Content & technical system', 'Qualified discovery', 'Relevant landing experience', 'Measured action']
+  return (
+    <div className="rounded-xl border cc-rule-md cc-canvas-white p-6 md:p-7 shadow-[0_24px_60px_-30px_rgba(10,23,48,0.35)]">
+      <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-slate-400 mb-5">How organic demand becomes revenue</p>
+      <ol className="space-y-0">
+        {stages.map((s, i) => (
+          <li key={s} className="relative pl-9 pb-5 last:pb-0">
+            {i < stages.length - 1 && <span className="absolute left-[13px] top-7 bottom-0 w-px bg-gradient-to-b from-amber-500/70 to-[rgba(10,23,48,0.12)]" aria-hidden />}
+            <span className={`absolute left-0 top-0.5 w-7 h-7 rounded-full border text-[11px] font-bold flex items-center justify-center
+              ${i === stages.length - 1 ? 'bg-[#0A1730] border-[#0A1730] text-amber-400' : 'bg-white cc-rule-md text-[#0A1730]'}`}>
+              {i + 1}
+            </span>
+            <p className={`text-[15px] leading-snug ${i === stages.length - 1 ? 'font-bold text-[#0A1730]' : 'font-medium text-slate-700'}`}>{s}</p>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-5 pt-4 border-t cc-rule text-[12.5px] text-slate-500 leading-relaxed">
+        FIG. 01 — Rankings are the middle of this system, not the end of it.
+      </p>
+    </div>
+  )
+}
 
-  const problemsFixed = [
-    { title: 'Slow Performance', desc: 'Pages that suppress rankings and conversions' },
-    { title: 'Indexing Issues', desc: 'Pages not being crawled or understood correctly' },
-    { title: 'Weak Architecture', desc: 'Confusing categories and messy internal links' },
-    { title: 'Poor Intent Match', desc: 'Content that targets keywords but doesn\'t convert' },
-    { title: 'Duplicate Content', desc: 'Thin pages that dilute authority' },
-    { title: 'Tracking Gaps', desc: 'Can\'t scale what you can\'t measure correctly' }
-  ]
+/* ─────────────────────────── Page ─────────────────────────── */
 
-  const deliverables = [
-    {
-      icon: Search,
-      category: 'Technical SEO Foundation',
-      items: [
-        'Full technical audit (crawl, indexability, architecture, performance)',
-        'Core Web Vitals and speed roadmap (prioritized fixes)',
-        'Structured data / schema alignment',
-        'Fixes for duplicates, cannibalization, thin pages',
-        'Clean URL structure guidance',
-        'Tracking integrity check'
-      ]
-    },
-    {
-      icon: Target,
-      category: 'On-Page SEO & Answer Optimization',
-      items: [
-        'Keyword + intent mapping per page',
-        'On-page optimization (titles, headings, internal linking)',
-        'Content upgrades for depth and conversion',
-        'SERP CTR improvements',
-        'Answer Engine Optimization (AEO) for AI tools like ChatGPT',
-        'FAQ schema and structured answers for featured snippets'
-      ]
-    },
-    {
-      icon: BarChart3,
-      category: 'Content Strategy',
-      items: [
-        'Topic strategy built around your offers',
-        'Content briefs for execution',
-        'Cluster strategy for authority building',
-        'Editorial workflow support',
-        'Entity optimization for AI discoverability'
-      ]
-    },
-    {
-      icon: TrendingUp,
-      category: 'Authority Building',
-      items: [
-        'Link strategy focused on relevance and trust',
-        'Content-led authority building',
-        'Brand signals that improve trust over time',
-        'Citation-worthy content for AI tool references'
-      ]
-    }
-  ]
-
-  const workflow = [
-    { title: 'Discovery + diagnosis', description: 'We align on business goals and identify what\'s blocking growth fastest.' },
-    { title: 'Fix foundations', description: 'Technical and structural work gets handled before "content volume" begins.' },
-    { title: 'Build growth assets', description: 'We improve key pages, publish the right content, and strengthen internal linking.' },
-    { title: 'Scale authority', description: 'We build credibility with a strategy that matches your niche and risk tolerance.' },
-    { title: 'Refine and compound', description: 'SEO wins stack when execution is consistent. We optimize what\'s working.' }
-  ]
-
-  const faqs = [
-    {
-      question: 'Do you guarantee #1 rankings?',
-      answer: 'No—anyone who guarantees positions is selling you a fantasy. What we do guarantee is disciplined execution, transparent reporting, and a strategy built around measurable business outcomes.'
-    },
-    {
-      question: 'How long until we see results?',
-      answer: 'It depends on competition, your site\'s starting condition, and how much needs fixing. The right way to think about SEO is: foundations first, then compounding growth.'
-    },
-    {
-      question: 'Do you only do SEO, or can you fix the site too?',
-      answer: 'We\'re technical. If the problem is the website (speed, structure, implementation), we can handle it—or coordinate tightly with your dev team so execution doesn\'t stall.',
-      link: '/services/website-development',
-      linkText: 'Website Development →'
-    },
-    {
-      question: 'What if we\'ve been burned before?',
-      answer: 'That\'s exactly who we\'re built for. We\'ll show you what\'s broken, what matters most, and what will actually be shipped—so you\'re not paying for "plans" and hoping.'
-    },
-    {
-      question: 'Do you outsource?',
-      answer: 'We don\'t sell work we can\'t control. Execution stays accountable and aligned with your goals.'
-    },
-    {
-      question: 'Can you help with AI visibility too (AEO/GEO)?',
-      answer: 'Yes. Answer Engine Optimization (AEO) is built into our SEO services—we structure content so AI tools like ChatGPT cite your brand. For Generative Engine Optimization (GEO), we offer specialized strategies to ensure your brand appears in AI-generated content and recommendations.',
-      link: '/services/geo',
-      linkText: 'Learn about GEO →'
-    }
-  ]
+export default function SeoServicesPage() {
+  const [dim, setDim] = useState(0)
+  const [wheel, setWheel] = useState(0)
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const D = AUDIT_DIMENSIONS[dim]
+  const W = FLYWHEEL[wheel]
 
   return (
-    <div className="relative overflow-hidden">
-      <section className="relative min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-cyan-50 pt-32 pb-16 overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-20 right-20 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-        </div>
+    <div className="relative overflow-hidden cc-canvas text-[#0A1730]">
 
-        <div className="container-custom relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-block mb-6"
-            >
-              <span className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-semibold rounded-full shadow-lg">
-                Full-Service SEO
-              </span>
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-blue-800 to-cyan-800 bg-clip-text text-transparent leading-tight"
-            >
-              SEO That Actually Moves the Needle
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-xl md:text-2xl text-gray-600 mb-6 leading-relaxed"
-            >
-              If you've been burned by agencies that sell confidence and outsource execution, this is your reset. We run hands-on SEO that fixes real issues, builds real authority, and turns visibility into revenue.
-            </motion.p>
-
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="text-lg text-gray-700 mb-8"
-            >
-              Technical and accountable—SEO built around your business goals, including Answer Engine Optimization (AEO) for AI tools.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" className="inline-block bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
-                Book a Discovery Call
-              </a>
-            </motion.div>
+      {/* ══════════ 1 · HERO ══════════ */}
+      <section className="relative border-b cc-rule">
+        <div className="container-custom pt-32 md:pt-40 pb-20 md:pb-24">
+          <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-14 lg:gap-16 items-center">
+            <div>
+              <Kicker>SEO Services</Kicker>
+              <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-bold leading-[1.08] tracking-tight">
+                Build Search Visibility Around the Customers and Opportunities That Matter.
+              </h1>
+              <p className="mt-6 text-lg md:text-xl text-slate-600 leading-relaxed max-w-xl">
+                Core Conversion improves how a business is discovered, understood, and chosen through technical SEO,
+                content architecture, on-page relevance, authority development, and conversion-aligned search strategy.
+              </p>
+              <p className="mt-4 text-[15.5px] text-slate-500 leading-relaxed max-w-xl">
+                The objective is not more rankings in isolation. It is stronger visibility for commercially relevant demand.
+              </p>
+              <div className="mt-9 flex flex-col sm:flex-row gap-4">
+                <InkButton href={CAL} external event={CCEvent.discoveryCall}>Discuss Your Search Visibility</InkButton>
+                <HairlineButton href="#proof">View SEO Results</HairlineButton>
+              </div>
+            </div>
+            <Reveal delay={0.1}>
+              <HeroFlow />
+            </Reveal>
           </div>
         </div>
-
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent"></div>
       </section>
 
-      <section className="py-24 bg-white">
+      {/* ══════════ 2 · THE BUSINESS ROLE — intent spectrum ══════════ */}
+      <section className="py-24 md:py-28 cc-canvas-alt border-b cc-rule">
         <div className="container-custom">
-          <div className="max-w-4xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-8 text-gray-900 text-center">
-                This is for businesses that want growth—not another report
-              </h2>
-            </AnimatedSection>
+          <Reveal className="max-w-3xl mb-14">
+            <Kicker>The Business Role of SEO</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.12]">
+              Search Is a Demand Channel and a Long-Term Business Asset.
+            </h2>
+            <p className="mt-5 text-lg text-slate-600 leading-relaxed">
+              SEO should help the business appear with the right information at the stages where organic search
+              influences the decision.
+            </p>
+          </Reveal>
 
-            <div className="space-y-4 mt-12">
-              {targetAudience.map((item, index) => (
-                <AnimatedSection key={index}>
-                  <div className="flex items-start gap-4 p-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300 group">
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <CheckCircle2 className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
-                    <p className="text-lg text-gray-700 leading-relaxed pt-1">{item}</p>
+          {/* Intent spectrum — one connected band, not four cards */}
+          <Reveal>
+            <div className="relative">
+              <span className="hidden lg:block absolute top-7 left-[6%] right-[6%] h-px bg-gradient-to-r from-[rgba(10,23,48,0.12)] via-amber-500/60 to-amber-500" aria-hidden />
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-10">
+                {INTENTS.map(({ stage, icon: Icon, desc, example }, i) => (
+                  <div key={stage} className="relative">
+                    <span className={`relative z-10 w-14 h-14 rounded-full flex items-center justify-center border mb-5
+                      ${i === INTENTS.length - 1 ? 'bg-[#0A1730] border-[#0A1730]' : 'bg-white cc-rule-md'}`}>
+                      <Icon className={`w-6 h-6 ${i === INTENTS.length - 1 ? 'text-amber-400' : 'text-[#0A1730]'}`} />
+                    </span>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-700">{example}</p>
+                    <h3 className="text-xl font-bold mt-1.5">{stage}</h3>
+                    <p className="mt-2.5 text-[15.5px] text-slate-600 leading-relaxed">{desc}</p>
                   </div>
-                </AnimatedSection>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ══════════ 3 · WHY SEO PROGRAMS UNDERPERFORM — findings sheet ══════════ */}
+      <section className="py-24 md:py-28 cc-canvas-white border-b cc-rule">
+        <div className="container-custom">
+          <div className="grid lg:grid-cols-[0.85fr_1.15fr] gap-12 lg:gap-16 items-start">
+            <Reveal className="lg:sticky lg:top-28">
+              <Kicker>Program Audit</Kicker>
+              <h2 className="text-3xl md:text-4xl font-bold leading-[1.14]">
+                Why SEO Programs Underperform.
+              </h2>
+              <p className="mt-5 text-[17px] text-slate-600 leading-relaxed">
+                When an SEO engagement fails, the causes are rarely mysterious. They are usually one or more of these —
+                and an honest assessment names them before proposing more spend.
+              </p>
+              <p className="mt-6 text-[15.5px] text-slate-500 leading-relaxed border-l-2 border-amber-500 pl-4">
+                SEO requires technical execution, editorial judgment, business relevance, and patient compounding —
+                not isolated tricks.
+              </p>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <div className="border-y cc-rule divide-y divide-[rgba(10,23,48,0.08)]">
+                {UNDERPERFORM.map((issue, i) => (
+                  <div key={issue} className="flex items-baseline gap-5 py-4">
+                    <span className="text-[13px] font-bold text-amber-700 tabular-nums shrink-0 w-8">{String(i + 1).padStart(2, '0')}</span>
+                    <p className="text-[16.5px] text-slate-700 leading-relaxed">{issue}</p>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 4 · SEO ASSESSMENT — audit workspace ══════════ */}
+      <section className="py-24 md:py-28 cc-canvas-alt border-b cc-rule">
+        <div className="container-custom">
+          <Reveal className="max-w-3xl mb-12">
+            <Kicker>The SEO Assessment</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.12]">
+              Five Dimensions, Examined Before Anything Is Recommended.
+            </h2>
+          </Reveal>
+
+          <div className="grid lg:grid-cols-[0.85fr_1.15fr] gap-8 lg:gap-12 items-stretch">
+            <Reveal>
+              <div className="flex flex-col gap-2.5" role="tablist" aria-label="Assessment dimensions">
+                {AUDIT_DIMENSIONS.map((d, i) => (
+                  <button key={d.title} onClick={() => { setDim(i); track(CCEvent.workstreamSelect, { page: 'seo', dimension: d.title }) }}
+                    role="tab" aria-selected={dim === i}
+                    className={`text-left rounded-xl border px-6 py-4 transition-all
+                      ${dim === i ? 'bg-white border-amber-500 shadow-[0_10px_30px_-18px_rgba(10,23,48,0.35)]' : 'bg-white/50 cc-rule hover:border-[rgba(10,23,48,0.3)]'}`}>
+                    <span className="flex items-center gap-4">
+                      <span className={`text-[13px] font-bold tabular-nums ${dim === i ? 'text-amber-600' : 'text-slate-400'}`}>{String(i + 1).padStart(2, '0')}</span>
+                      <span className={`text-[16.5px] font-bold ${dim === i ? 'text-[#0A1730]' : 'text-slate-600'}`}>{d.title}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </Reveal>
+            <Reveal delay={0.05} className="flex">
+              <div key={dim} className="w-full rounded-xl border cc-rule-md cc-canvas-white p-8 md:p-9">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-700">Dimension {String(dim + 1).padStart(2, '0')} of {AUDIT_DIMENSIONS.length}</p>
+                <h3 className="text-2xl font-bold mt-1.5">{D.title}</h3>
+                <p className="mt-3 text-[16.5px] text-slate-600 leading-relaxed">{D.lead}</p>
+                <div className="mt-6 pt-6 border-t cc-rule flex flex-wrap gap-2">
+                  {D.items.map((it) => (
+                    <span key={it} className="rounded-full bg-white border cc-rule-md px-3.5 py-1.5 text-[13.5px] font-medium text-slate-700">{it}</span>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 5 · THE SEO GROWTH SYSTEM — noir flywheel ══════════ */}
+      <section className="py-24 md:py-28 cc-noir">
+        <div className="container-custom">
+          <Reveal className="max-w-3xl mb-14">
+            <Kicker light>The SEO Growth System</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.12] text-white">
+              Seven Workstreams That Turn Effort Into a Compounding Asset.
+            </h2>
+            <p className="mt-5 text-lg text-slate-300 leading-relaxed">
+              Select a workstream. Each one feeds the next — that is why the system compounds where isolated tactics decay.
+            </p>
+          </Reveal>
+
+          <div className="grid lg:grid-cols-[1fr_0.9fr] gap-10 lg:gap-14 items-center">
+            {/* Flywheel diagram */}
+            <Reveal>
+              <div className="relative aspect-square max-w-[480px] mx-auto w-full">
+                <span className="absolute inset-[11%] rounded-full border border-white/10" aria-hidden />
+                <span className="absolute inset-[11%] rounded-full border border-amber-400/25 [clip-path:inset(0_0_50%_0)]" aria-hidden />
+                {/* hub */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[34%] aspect-square rounded-full bg-white/[0.04] border border-amber-400/30 flex flex-col items-center justify-center text-center px-4">
+                  <TrendingUp className="w-6 h-6 text-amber-400 mb-2" />
+                  <p className="text-[12.5px] font-bold text-white leading-tight">Compounding<br />Search Asset</p>
+                </div>
+                {/* nodes */}
+                {FLYWHEEL.map(({ icon: Icon, title }, i) => {
+                  const a = (i / FLYWHEEL.length) * Math.PI * 2 - Math.PI / 2
+                  const x = 50 + 39 * Math.cos(a)
+                  const y = 50 + 39 * Math.sin(a)
+                  const on = wheel === i
+                  return (
+                    <button key={title} onClick={() => { setWheel(i); track(CCEvent.workstreamSelect, { page: 'seo', workstream: title }) }}
+                      aria-label={title} style={{ left: `${x}%`, top: `${y}%` }}
+                      className={`absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 md:w-14 md:h-14 rounded-full border flex items-center justify-center transition-all
+                        ${on ? 'bg-amber-400 border-amber-400 text-[#0B0C10] scale-110 shadow-[0_0_30px_rgba(251,191,36,0.35)]' : 'bg-white/[0.05] border-white/15 text-white hover:border-amber-400/60'}`}>
+                      <Icon className="w-5 h-5" />
+                    </button>
+                  )
+                })}
+              </div>
+            </Reveal>
+
+            {/* Detail panel */}
+            <Reveal delay={0.05}>
+              <div key={wheel} className="rounded-xl border border-white/10 bg-white/[0.04] p-8 md:p-9">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-400">Workstream {String(wheel + 1).padStart(2, '0')} of {FLYWHEEL.length}</p>
+                <h3 className="text-2xl font-bold text-white mt-1.5">{W.title}</h3>
+                <p className="mt-3 text-[16.5px] text-slate-300 leading-relaxed">{W.desc}</p>
+                <div className="mt-7 flex gap-1.5">
+                  {FLYWHEEL.map((_, j) => (
+                    <button key={j} onClick={() => setWheel(j)} aria-label={`Workstream ${j + 1}`}
+                      className={`h-1 flex-1 rounded-full transition-colors ${j === wheel ? 'bg-amber-400' : 'bg-white/15 hover:bg-white/30'}`} />
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 6 · WHAT THE CLIENT RECEIVES ══════════ */}
+      <section className="py-24 md:py-28 cc-canvas-white border-b cc-rule">
+        <div className="container-custom">
+          <Reveal className="max-w-3xl mb-12">
+            <Kicker>What the Client Receives</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.12]">
+              Defined Outputs — Not a Monthly Mystery.
+            </h2>
+          </Reveal>
+
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+            <Reveal>
+              <div className="h-full border-t-2 border-[#0A1730] pt-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 mb-5">Phase One — Assessment &amp; Roadmap</p>
+                <ul className="space-y-3.5">
+                  {INITIAL_OUTPUTS.map((o) => (
+                    <li key={o} className="flex gap-3.5 items-baseline">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 translate-y-[-2px]" aria-hidden />
+                      <span className="text-[16.5px] text-slate-700 leading-relaxed">{o}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <div className="h-full border-t-2 border-amber-500 pt-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 mb-5">Ongoing — Depending on Scope</p>
+                <div className="flex flex-wrap gap-2">
+                  {ONGOING_OUTPUTS.map((o) => (
+                    <span key={o} className="rounded-full bg-white border cc-rule-md px-3.5 py-1.5 text-[13.5px] font-medium text-slate-700">{o}</span>
+                  ))}
+                </div>
+                <p className="mt-7 text-[15.5px] text-slate-600 leading-relaxed border-l-2 border-amber-500 pl-4">
+                  SEO is not defined by a fixed number of articles. Some months may require technical repair, page
+                  consolidation, content improvement, authority work, or conversion changes instead of additional publishing.
+                </p>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 7 · RELATIONSHIP WITH LOCAL SEO & GEO — overlap ══════════ */}
+      <section className="py-24 md:py-28 cc-canvas-alt border-b cc-rule">
+        <div className="container-custom">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <Reveal>
+              <Kicker>One Discipline, Three Frontiers</Kicker>
+              <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.12]">
+                SEO, Local SEO, and GEO Overlap — but They Are Not Interchangeable.
+              </h2>
+              <p className="mt-5 text-[17px] text-slate-600 leading-relaxed">
+                The recommendation should reflect how the target customer actually searches and chooses.
+              </p>
+              <div className="mt-8 space-y-4">
+                {[
+                  { t: 'SEO', d: 'Broader organic visibility across relevant search demand.', href: null },
+                  { t: 'Local SEO', d: 'Location-based visibility, map results, reviews, local relevance, and nearby intent.', href: '/services/local-seo' },
+                  { t: 'GEO / AI Search Visibility', d: 'Clarity, structure, credibility, and retrievability across AI-assisted discovery.', href: '/services/geo' },
+                ].map(({ t, d, href }) => (
+                  <div key={t} className="flex gap-4 items-baseline">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" aria-hidden />
+                    <p className="text-[16px] text-slate-700 leading-relaxed">
+                      <strong className="text-[#0A1730]">{t}</strong> — {d}{' '}
+                      {href && <Link href={href} className="font-semibold text-amber-700 hover:text-amber-600 whitespace-nowrap">Explore <ArrowUpRight className="inline w-3.5 h-3.5" /></Link>}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8">
+                <HairlineButton href="/services/digital-marketing-services">Explore Integrated Digital Marketing</HairlineButton>
+              </div>
+            </Reveal>
+
+            {/* three-circle overlap */}
+            <Reveal delay={0.08}>
+              <div className="relative max-w-md mx-auto aspect-square">
+                <div className="absolute left-1/2 top-[8%] -translate-x-1/2 w-[58%] aspect-square rounded-full border-2 border-[#0A1730]/70 bg-[#0A1730]/[0.05] flex items-start justify-center pt-7">
+                  <span className="text-[13px] font-bold text-[#0A1730]">SEO</span>
+                </div>
+                <div className="absolute left-[6%] bottom-[10%] w-[58%] aspect-square rounded-full border-2 border-amber-500/70 bg-amber-500/[0.06] flex items-end justify-start pb-9 pl-9">
+                  <span className="text-[13px] font-bold text-amber-700">Local SEO</span>
+                </div>
+                <div className="absolute right-[6%] bottom-[10%] w-[58%] aspect-square rounded-full border-2 border-slate-400/70 bg-slate-400/[0.07] flex items-end justify-end pb-9 pr-9">
+                  <span className="text-[13px] font-bold text-slate-600">GEO</span>
+                </div>
+                <div className="absolute left-1/2 top-[54%] -translate-x-1/2 -translate-y-1/2 text-center">
+                  <span className="inline-block rounded-full bg-white border cc-rule-md px-4 py-2 text-[12px] font-bold text-[#0A1730] shadow-sm">How your customer<br />actually searches</span>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 8 · PROOF ══════════ */}
+      <section id="proof" className="py-24 md:py-28 cc-canvas-white border-b cc-rule scroll-mt-20">
+        <div className="container-custom">
+          <Reveal className="max-w-3xl mb-12">
+            <Kicker>Evidence</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.12]">
+              Real Search Work, Shown With Its Context and Limits.
+            </h2>
+            <p className="mt-5 text-lg text-slate-600 leading-relaxed">
+              Every screenshot below comes from real client reporting. We state the period it covers and what it does
+              not prove — because search evidence without context is marketing, not proof.
+            </p>
+          </Reveal>
+
+          <div className="space-y-8">
+            {PROOF_CASES.map(({ img, sector, context, work, note }, i) => (
+              <Reveal key={sector} delay={(i % 3) * 0.05}>
+                <div className="grid lg:grid-cols-[0.9fr_1.1fr] rounded-xl border cc-rule overflow-hidden bg-white">
+                  <div className="relative border-b lg:border-b-0 lg:border-r cc-rule bg-slate-50">
+                    <img src={img} alt={`${sector} search visibility evidence`} loading="lazy" className="w-full h-full max-h-72 object-cover object-top" />
+                  </div>
+                  <div className="p-8 md:p-9">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-700">{sector}</p>
+                    <p className="mt-3 text-[16.5px] text-slate-700 leading-relaxed"><strong className="text-[#0A1730]">Context.</strong> {context}</p>
+                    <p className="mt-2.5 text-[16.5px] text-slate-700 leading-relaxed"><strong className="text-[#0A1730]">Work.</strong> {work}</p>
+                    <p className="mt-4 pt-4 border-t cc-rule text-[14px] text-slate-500 leading-relaxed flex gap-2.5">
+                      <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" /> {note}
+                    </p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal className="mt-10">
+            <Link href="/case-studies" onClick={() => track(CCEvent.caseStudyView, { page: 'seo' })}
+              className="inline-flex items-center gap-2 font-semibold text-[#0A1730] hover:text-amber-700 transition-colors">
+              View the full case studies <ArrowUpRight className="w-4 h-4" />
+            </Link>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ══════════ 9 · MEASUREMENT ══════════ */}
+      <section className="py-24 md:py-28 cc-canvas-alt border-b cc-rule">
+        <div className="container-custom">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+            <Reveal className="lg:sticky lg:top-28">
+              <Kicker>Measurement</Kicker>
+              <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.12]">
+                Rankings Matter. Their Business Meaning Matters More.
+              </h2>
+              <p className="mt-6 text-[15.5px] text-slate-600 leading-relaxed border-l-2 border-amber-500 pl-4">
+                Not every customer journey can be attributed perfectly. Reports must distinguish measured outcomes,
+                directional signals, and informed interpretation.
+              </p>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 mb-5">Reviewed in every growth cycle</p>
+              <div className="grid sm:grid-cols-2 gap-x-8 gap-y-3.5">
+                {MEASURE_AREAS.map((m) => (
+                  <div key={m} className="flex gap-3 items-baseline border-b cc-rule pb-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 translate-y-[-2px]" aria-hidden />
+                    <span className="text-[15.5px] text-slate-700">{m}</span>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 10 · ENGAGEMENT & INVESTMENT ══════════ */}
+      <section className="py-24 md:py-28 cc-canvas-white border-b cc-rule">
+        <div className="container-custom">
+          <Reveal className="max-w-3xl mb-12">
+            <Kicker>Engagement &amp; Investment</Kicker>
+            <h2 className="text-3xl md:text-4xl lg:text-[2.9rem] font-bold leading-[1.12]">
+              Scoped to the Constraint — Not Sold From a Menu.
+            </h2>
+          </Reveal>
+
+          <Reveal>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400 mb-4">Appropriate engagement shapes</p>
+            <div className="flex flex-wrap gap-2 mb-12">
+              {ENGAGEMENTS.map((e) => (
+                <span key={e} className="rounded-full bg-white border cc-rule-md px-4 py-2 text-[14px] font-medium text-slate-700">{e}</span>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
+          </Reveal>
 
-      <section className="py-24 bg-gradient-to-br from-blue-50 via-white to-cyan-50">
-        <div className="container-custom">
-          <div className="max-w-5xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 text-center">
-                The problems we fix
-              </h2>
-              <p className="text-2xl text-center font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-12">
-                The stuff most agencies avoid
-              </p>
-            </AnimatedSection>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {problemsFixed.map((problem, index) => (
-                <AnimatedSection key={index}>
-                  <div className="group h-full p-6 bg-white rounded-2xl border border-gray-200 hover:border-blue-400 hover:shadow-xl transition-all duration-300">
-                    <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                      <Shield className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{problem.title}</h3>
-                    <p className="text-gray-600 leading-relaxed">{problem.desc}</p>
-                  </div>
-                </AnimatedSection>
-              ))}
+          <Reveal>
+            <div className="rounded-2xl border cc-rule overflow-hidden grid lg:grid-cols-2">
+              <div className="p-9 md:p-11">
+                <h3 className="text-2xl font-bold">Investment Follows the Starting Condition and the Market.</h3>
+                <p className="mt-4 text-[16px] text-slate-600 leading-relaxed">
+                  Monthly ranges and the minimum sensible term are shared during discovery, after we understand the
+                  website, competition, and internal capability. We would rather decline an engagement than quote a
+                  number that cannot fund honest work.
+                </p>
+                <div className="mt-6"><InkButton href={CAL} external event={CCEvent.discoveryCall}>Scope Your SEO Program</InkButton></div>
+              </div>
+              <div className="cc-canvas-alt border-t lg:border-t-0 lg:border-l cc-rule p-9 md:p-11">
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-amber-700 mb-4">What shapes the range</p>
+                <div className="flex flex-wrap gap-2">
+                  {INVESTMENT_DRIVERS.map((f) => (
+                    <span key={f} className="rounded-full bg-white border cc-rule-md px-3 py-1.5 text-[13px] font-medium text-slate-700">{f}</span>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
-      <section className="py-24 bg-white">
+      {/* ══════════ 11 · FAQs ══════════ */}
+      <section className="py-24 md:py-28 cc-canvas-alt border-b cc-rule">
         <div className="container-custom">
-          <div className="max-w-5xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 text-center">
-                What's included
+          <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-16 items-start">
+            <Reveal className="lg:sticky lg:top-28">
+              <Kicker>Decision Support</Kicker>
+              <h2 className="text-3xl md:text-4xl font-bold leading-[1.14]">
+                The Questions Serious Buyers Ask About SEO.
               </h2>
-              <p className="text-xl text-gray-600 mb-16 text-center">
-                Real deliverables, not vague promises
-              </p>
-            </AnimatedSection>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {deliverables.map((section, index) => {
-                const Icon = section.icon
+            </Reveal>
+            <Reveal delay={0.05} className="divide-y divide-[rgba(10,23,48,0.1)] border-y cc-rule">
+              {FAQS.map((f, i) => {
+                const open = openFaq === i
                 return (
-                  <AnimatedSection key={index}>
-                    <div className="h-full p-8 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border border-blue-200 hover:border-blue-400 hover:shadow-xl transition-all duration-300">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center">
-                          <Icon className="w-7 h-7 text-white" />
-                        </div>
-                        <h3 className="text-2xl font-bold text-gray-900">
-                          {section.category}
-                        </h3>
-                      </div>
-                      <ul className="space-y-3">
-                        {section.items.map((item, itemIndex) => (
-                          <li key={itemIndex} className="flex items-start gap-3">
-                            <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                            <span className="text-gray-700 leading-relaxed">{item}</span>
-                          </li>
-                        ))}
-                      </ul>
+                  <div key={f.q}>
+                    <button onClick={() => { setOpenFaq(open ? null : i); if (!open) track(CCEvent.faqOpen, { page: 'seo', question: f.q }) }}
+                      aria-expanded={open} className="w-full flex items-start justify-between gap-6 text-left py-6 group">
+                      <span className="text-lg font-semibold text-[#0A1730] group-hover:text-amber-700 transition-colors">{f.q}</span>
+                      <span className="w-7 h-7 rounded-full border cc-rule-md flex items-center justify-center shrink-0 mt-0.5 text-slate-500 group-hover:border-amber-500 group-hover:text-amber-700 transition-colors">
+                        {open ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      </span>
+                    </button>
+                    <div className={`grid transition-all duration-300 ease-out ${open ? 'grid-rows-[1fr] opacity-100 pb-6' : 'grid-rows-[0fr] opacity-0'}`}>
+                      <div className="overflow-hidden"><p className="text-[16px] text-slate-600 leading-relaxed max-w-2xl">{f.a}</p></div>
                     </div>
-                  </AnimatedSection>
+                  </div>
                 )
               })}
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
-      <section className="py-24 bg-gradient-to-br from-blue-50 via-white to-cyan-50">
-        <div className="container-custom">
-          <div className="max-w-4xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900 text-center">
-                How we work
-              </h2>
-              <p className="text-xl text-gray-600 mb-16 text-center">
-                Tailored, not templated
-              </p>
-            </AnimatedSection>
-
-            <div className="space-y-6">
-              {workflow.map((step, index) => (
-                <AnimatedSection key={index}>
-                  <div className="flex items-start gap-6 p-8 bg-white rounded-2xl border border-gray-200 hover:border-blue-400 hover:shadow-xl transition-all duration-300 group">
-                    <div className="flex-shrink-0">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold text-xl group-hover:scale-110 transition-transform duration-300">
-                        {index + 1}
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                        {step.title}
-                      </h3>
-                      <p className="text-gray-600 leading-relaxed text-lg">{step.description}</p>
-                    </div>
-                  </div>
-                </AnimatedSection>
-              ))}
-            </div>
-
-            <AnimatedSection className="mt-12">
-              <p className="text-2xl font-semibold text-center bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                No one-size-fits-all. Just a roadmap built for your business.
-              </p>
-            </AnimatedSection>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 bg-white">
-        <div className="container-custom">
-          <div className="max-w-4xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
-                Why CCOMS
-              </h2>
-              <p className="text-xl text-gray-600 mb-8">
-                You're hiring people who do the work—not people who outsource it.
-              </p>
-            </AnimatedSection>
-
-            <AnimatedSection>
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 md:p-12 border border-blue-200">
-                <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                  I'm John Paul Carrasco, founder of CCOMS. I've spent 15 years doing hands-on SEO and technical execution—down to code, hosting, domains, DNS, and performance. That technical depth matters because SEO breaks when strategy is separated from implementation.
-                </p>
-                <p className="text-lg text-gray-700 leading-relaxed mb-6">
-                  We're built for long-term partnerships, not one-month churn. Clients stay because execution stays consistent—and results compound.
-                </p>
-                <Link href="/about" className="inline-flex items-center text-blue-600 font-semibold hover:text-cyan-600 transition-colors text-lg">
-                  Learn more about CCOMS <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </div>
-            </AnimatedSection>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 bg-gradient-to-br from-blue-50 via-white to-cyan-50">
-        <div className="container-custom">
-          <div className="max-w-3xl mx-auto">
-            <AnimatedSection>
-              <h2 className="text-4xl font-bold mb-12 text-center text-gray-900">
-                Frequently Asked Questions
-              </h2>
-            </AnimatedSection>
-
-            <div className="space-y-6">
-              {faqs.map((faq, index) => (
-                <AnimatedSection key={index}>
-                  <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300">
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">
-                      {faq.question}
-                    </h3>
-                    <p className="text-gray-700 leading-relaxed mb-3">{faq.answer}</p>
-                    {faq.link && (
-                      <Link href={faq.link} className="text-blue-600 font-semibold hover:text-cyan-600 transition-colors">
-                        {faq.linkText}
-                      </Link>
-                    )}
-                  </div>
-                </AnimatedSection>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 bg-gradient-to-br from-blue-600 via-cyan-600 to-blue-700 text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMzLjMxNCAwIDYgMi42ODYgNiA2cy0yLjY4NiA2LTYgNi02LTIuNjg2LTYtNiAyLjY4Ni02IDYtNnoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMyIvPjwvZz48L3N2Zz4=')] opacity-30"></div>
-        </div>
-
+      {/* ══════════ 12 · FINAL CTA — noir close ══════════ */}
+      <section className="relative py-28 md:py-32 cc-noir overflow-hidden">
         <div className="container-custom relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <AnimatedSection>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
-                Done paying for half-delivered SEO?
-              </h2>
-
-              <p className="text-xl text-blue-100 mb-12 leading-relaxed">
-                Book a discovery call and we'll map a tailored plan that targets growth you can measure.
-              </p>
-
-              <a href="https://calendly.com/ccoms/discovery-call" target="_blank" rel="noopener noreferrer" className="inline-block bg-white text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
-                Book a Discovery Call
+          <Reveal className="max-w-3xl mx-auto text-center">
+            <span className="block h-10 w-px bg-amber-400 mx-auto mb-8" aria-hidden />
+            <Kicker light>Next Step</Kicker>
+            <h2 className="text-3xl md:text-5xl font-bold leading-[1.1] text-white">
+              Build Organic Visibility That Supports the Business.
+            </h2>
+            <p className="mt-6 text-lg md:text-xl text-slate-300 leading-relaxed">
+              We will review the business priorities, current search position, website, competition, and conversion path
+              before recommending the appropriate SEO scope.
+            </p>
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+              <a href={CAL} target="_blank" rel="noopener noreferrer" onClick={() => track(CCEvent.discoveryCall, { page: 'seo' })}
+                className="group inline-flex items-center justify-center gap-2.5 bg-amber-400 hover:bg-amber-300 text-[#0B0C10] font-semibold px-7 py-3.5 rounded-lg transition-colors">
+                Request an SEO Assessment <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </a>
-            </AnimatedSection>
-          </div>
+              <HairlineButton href="#proof" light>View SEO Proof</HairlineButton>
+            </div>
+          </Reveal>
         </div>
       </section>
-
-      <style jsx>{`
-        @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-      `}</style>
     </div>
   )
 }

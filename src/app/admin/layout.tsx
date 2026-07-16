@@ -30,12 +30,18 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [showNewDropdown, setShowNewDropdown] = useState(false)
   const [showSiteTitleDropdown, setShowSiteTitleDropdown] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const [liveChats, setLiveChats] = useState<any[]>([])
+  const [openTickets, setOpenTickets] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+
+  const BRIDGE = process.env.NEXT_PUBLIC_API_URL || 'https://ccoms.ph/api-bridge.php'
+  const notifCount = liveChats.length + openTickets.length
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
 
   const navigation: NavSection[] = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'Leads', href: '/admin/leads', icon: Zap },
     {
       name: 'Clients',
       icon: Briefcase,
@@ -113,6 +119,30 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       ]
     },
   ]
+
+  // Live notification polling — active chats + open tickets
+  useEffect(() => {
+    const fetchNotifs = async () => {
+      try {
+        const url = new URL(BRIDGE)
+        url.searchParams.set('action', 'chat-poll')
+        url.searchParams.set('type', 'admin-sessions')
+        const chatData = await fetch(url.toString(), { credentials: 'include' }).then(r => r.json())
+        setLiveChats((chatData.sessions || []).filter((s: any) => s.mode !== 'ended'))
+      } catch {}
+      try {
+        const { data } = await supabase.from('support_tickets')
+          .select('id, subject, visitor_name, created_at, status')
+          .eq('status', 'open')
+          .order('created_at', { ascending: false })
+          .limit(5)
+        setOpenTickets(data || [])
+      } catch {}
+    }
+    fetchNotifs()
+    const interval = setInterval(fetchNotifs, 20000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     if (!loading && !user && pathname !== '/admin/login' && pathname !== '/admin/setup') {
@@ -352,32 +382,73 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               className="hover:text-blue-400 transition-colors relative"
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              {notifCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white leading-none">
+                  {notifCount > 9 ? '9+' : notifCount}
+                </span>
+              )}
             </button>
 
             {showNotifications && (
               <div className="absolute top-full right-0 mt-1 bg-white text-gray-900 rounded shadow-lg w-80 z-50">
-                <div className="p-4 border-b border-gray-200">
+                <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900">Notifications</h3>
+                  {notifCount > 0 && (
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">{notifCount} active</span>
+                  )}
                 </div>
                 <div className="max-h-96 overflow-y-auto">
-                  <div className="p-4 border-b border-gray-100 hover:bg-gray-50">
-                    <p className="text-sm font-medium text-gray-900">New comment pending approval</p>
-                    <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
-                  </div>
-                  <div className="p-4 border-b border-gray-100 hover:bg-gray-50">
-                    <p className="text-sm font-medium text-gray-900">Post scheduled for publishing</p>
-                    <p className="text-xs text-gray-500 mt-1">5 hours ago</p>
-                  </div>
-                  <div className="p-4 hover:bg-gray-50">
-                    <p className="text-sm font-medium text-gray-900">New contact submission</p>
-                    <p className="text-xs text-gray-500 mt-1">1 day ago</p>
-                  </div>
+                  {liveChats.length > 0 && (
+                    <>
+                      <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Live Chats</p>
+                      </div>
+                      {liveChats.map((chat: any) => (
+                        <Link
+                          key={chat.id}
+                          href="/admin/support/chat"
+                          onClick={() => setShowNotifications(false)}
+                          className="flex items-start gap-3 px-4 py-3 border-b border-gray-100 hover:bg-blue-50 transition-colors"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{chat.visitor_name}</p>
+                            <p className="text-xs text-gray-500">{chat.mode === 'ai' ? '🤖 AI handling' : '👤 Needs agent'} · {chat.category}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </>
+                  )}
+                  {openTickets.length > 0 && (
+                    <>
+                      <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Open Tickets</p>
+                      </div>
+                      {openTickets.map((ticket: any) => (
+                        <Link
+                          key={ticket.id}
+                          href="/admin/support"
+                          onClick={() => setShowNotifications(false)}
+                          className="flex items-start gap-3 px-4 py-3 border-b border-gray-100 hover:bg-amber-50 transition-colors"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{ticket.subject}</p>
+                            <p className="text-xs text-gray-500">{ticket.visitor_name}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </>
+                  )}
+                  {notifCount === 0 && (
+                    <div className="px-4 py-8 text-center text-sm text-gray-400">
+                      No active chats or open tickets
+                    </div>
+                  )}
                 </div>
-                <div className="p-3 border-t border-gray-200">
-                  <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                    View all notifications
-                  </button>
+                <div className="p-3 border-t border-gray-200 flex gap-3">
+                  <Link href="/admin/support/chat" onClick={() => setShowNotifications(false)} className="text-xs text-blue-600 hover:text-blue-700 font-medium">Live Chat</Link>
+                  <Link href="/admin/support" onClick={() => setShowNotifications(false)} className="text-xs text-blue-600 hover:text-blue-700 font-medium">Tickets</Link>
                 </div>
               </div>
             )}

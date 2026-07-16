@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Core Conversion — leads system rules (spec §14).
+//
+// Public users: NO direct Firestore access at all. Every lead is created by
+// the submitAssessment Cloud Function through the Admin SDK, which bypasses
+// these rules.
+//
+// Admin users: authenticated accounts carrying the `admin: true` custom claim
+// (set via scripts/set-admin-claim.mjs) may read and update operational
+// fields from the back panel. Nobody can delete through the client — archive
+// instead (spec §13.3).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    match /leads/{leadId} {
+      allow read: if isAdmin();
+      allow create: if false;   // created only by the Cloud Function (Admin SDK)
+      allow delete: if false;   // never delete from the client — archive instead
+
+      // Admins may update operational fields only; submitted answers and
+      // attribution data stay immutable from the client.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'assignedTo', 'lastContactedAt', 'nextFollowUpAt',
+          'internalNotes', 'history', 'isArchived', 'updatedAt'
+        ]);
+    }
+
+    // Rate-limit counters are Cloud Function internals.
+    match /rate_limits/{doc} {
+      allow read, write: if false;
+    }
+
+    // Default deny for anything else.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

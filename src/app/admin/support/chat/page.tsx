@@ -16,6 +16,8 @@ interface Session {
   category: string
   mode: 'ai' | 'human' | 'ended'
   started_at: string
+  last_message_sender?: string
+  last_message_at?: string
 }
 
 interface Message {
@@ -34,15 +36,18 @@ export default function LiveChatHubPage() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [macros, setMacros] = useState<Macro[]>([])
   const [macroChip, setMacroChip] = useState<Macro | null>(null)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const sessionPollRef = useRef<NodeJS.Timeout | null>(null)
   const msgPollRef = useRef<NodeJS.Timeout | null>(null)
   const lastMsgCount = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Track when admin last viewed each session (sessionId → timestamp ms)
+  const viewedAt = useRef<Map<string, number>>(new Map())
 
-  const selectedSessionData = sessions.find(s => s.id === selectedSession)
   const BRIDGE = process.env.NEXT_PUBLIC_API_URL!
 
   const bridgeGet = async (params: Record<string, string>) => {
@@ -62,38 +67,30 @@ export default function LiveChatHubPage() {
     return res.json()
   }
 
+  const isUnread = (s: Session): boolean => {
+    if (s.last_message_sender !== 'visitor') return false
+    if (!s.last_message_at) return false
+    const lastMsg = new Date(s.last_message_at.endsWith('Z') ? s.last_message_at : s.last_message_at + 'Z').getTime()
+    const seen = viewedAt.current.get(s.id) ?? 0
+    return lastMsg > seen
+  }
+
+  const selectedSessionData = sessions.find(s => s.id === selectedSession)
+
   // Load macros on mount
   useEffect(() => {
     supabase.from('site_settings').select('value').eq('key', 'support_macros').maybeSingle()
       .then(({ data }) => { if (data?.value && Array.isArray(data.value)) setMacros(data.value) })
   }, [])
 
-  // Poll sessions every 5s
-  useEffect(() => {
-    fetchSessions()
-    sessionPollRef.current = setInterval(fetchSessions, 5000)
-    return () => { if (sessionPollRef.current) clearInterval(sessionPollRef.current) }
-  }, [])
-
-  // Auto-poll messages every 3s when a session is selected
-  useEffect(() => {
-    if (msgPollRef.current) clearInterval(msgPollRef.current)
-    if (!selectedSession) return
-    fetchMessages(selectedSession)
-    msgPollRef.current = setInterval(() => fetchMessages(selectedSession), 3000)
-    return () => { if (msgPollRef.current) clearInterval(msgPollRef.current) }
-  }, [selectedSession])
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  const fetchSessions = async () => {
+  const fetchSessions = async (showSpinner = false) => {
+    if (showSpinner) setRefreshing(true)
     try {
       const data = await bridgeGet({ action: 'chat-poll', type: 'admin-sessions' })
       setSessions(data.sessions || [])
     } catch {}
     setLoading(false)
+    if (showSpinner) setRefreshing(false)
   }
 
   const fetchMessages = async (sessionId: string) => {
@@ -114,6 +111,32 @@ export default function LiveChatHubPage() {
       })
       if (data.session) setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, ...data.session } : s))
     } catch {}
+  }
+
+  // Poll sessions every 5s
+  useEffect(() => {
+    fetchSessions()
+    sessionPollRef.current = setInterval(() => fetchSessions(), 5000)
+    return () => { if (sessionPollRef.current) clearInterval(sessionPollRef.current) }
+  }, [])
+
+  // Auto-poll messages every 3s when a session is selected
+  useEffect(() => {
+    if (msgPollRef.current) clearInterval(msgPollRef.current)
+    if (!selectedSession) return
+    fetchMessages(selectedSession)
+    msgPollRef.current = setInterval(() => fetchMessages(selectedSession), 3000)
+    return () => { if (msgPollRef.current) clearInterval(msgPollRef.current) }
+  }, [selectedSession])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const selectSession = (id: string) => {
+    viewedAt.current.set(id, Date.now())
+    setSelectedSession(id)
+    lastMsgCount.current = 0
   }
 
   const takeover = async (sessionId: string) => {
@@ -178,6 +201,8 @@ export default function LiveChatHubPage() {
     return 'bg-white border border-gray-200 text-gray-800'
   }
 
+  const unreadCount = sessions.filter(s => isUnread(s) && s.id !== selectedSession).length
+
   return (
     <div className="h-full flex overflow-hidden">
       {/* Sessions list */}
@@ -185,10 +210,18 @@ export default function LiveChatHubPage() {
         <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
           <div>
             <h2 className="font-bold text-gray-900">Live Chat Hub</h2>
-            <p className="text-xs text-gray-500">{sessions.length} active session{sessions.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-500">
+              {sessions.length} session{sessions.length !== 1 ? 's' : ''}
+              {unreadCount > 0 && <span className="ml-1 text-blue-600 font-semibold">· {unreadCount} unread</span>}
+            </p>
           </div>
-          <button onClick={fetchSessions} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-            <RefreshCw className="w-4 h-4 text-gray-500" />
+          <button
+            onClick={() => fetchSessions(true)}
+            disabled={refreshing}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh sessions"
+          >
+            <RefreshCw className={`w-4 h-4 text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -200,20 +233,47 @@ export default function LiveChatHubPage() {
               <p className="text-sm text-gray-500">No active chats</p>
               <p className="text-xs text-gray-400 mt-1">New sessions appear here automatically</p>
             </div>
-          ) : sessions.map(s => (
-            <button key={s.id} onClick={() => setSelectedSession(s.id)}
-              className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${selectedSession === s.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}>
-              <div className="flex items-start justify-between mb-1">
-                <p className="font-semibold text-gray-900 text-sm truncate">{s.visitor_name}</p>
-                <span className="text-xs text-gray-400 shrink-0 ml-2 flex items-center gap-1"><Clock className="w-3 h-3" />{formatElapsed(s.started_at)}</span>
-              </div>
-              <p className="text-xs text-gray-500 truncate mb-1.5">{s.visitor_email}</p>
-              <div className="flex gap-1.5">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catColor(s.category)}`}>{s.category}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${s.mode === 'ai' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>{s.mode === 'ai' ? '🤖 AI' : '👤 Human'}</span>
-              </div>
-            </button>
-          ))}
+          ) : sessions.map(s => {
+            const unread = isUnread(s) && s.id !== selectedSession
+            const isSelected = selectedSession === s.id
+            return (
+              <button
+                key={s.id}
+                onClick={() => selectSession(s.id)}
+                className={`w-full text-left px-4 py-3 border-b border-gray-100 transition-colors relative
+                  ${isSelected
+                    ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                    : unread
+                      ? 'bg-white hover:bg-blue-50 border-l-4 border-l-blue-400'
+                      : 'bg-gray-50 hover:bg-gray-100 border-l-4 border-l-transparent'
+                  }`}
+              >
+                <div className="flex items-start justify-between mb-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {unread && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />}
+                    <p className={`text-sm truncate ${unread ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                      {s.visitor_name}
+                    </p>
+                  </div>
+                  <span className="text-xs text-gray-400 shrink-0 ml-2 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />{formatElapsed(s.started_at)}
+                  </span>
+                </div>
+                <p className={`text-xs truncate mb-1.5 ${unread ? 'text-gray-700' : 'text-gray-400'}`}>
+                  {s.visitor_email}
+                </p>
+                <div className="flex gap-1.5">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catColor(s.category)}`}>{s.category}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${s.mode === 'ai' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {s.mode === 'ai' ? '🤖 AI' : '👤 Human'}
+                  </span>
+                  {unread && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">New</span>
+                  )}
+                </div>
+              </button>
+            )
+          })}
         </div>
       </div>
 
