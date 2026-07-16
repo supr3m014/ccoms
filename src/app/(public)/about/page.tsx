@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Reveal } from '@/components/Reveal'
 import {
   ArrowRight, ArrowUpRight, Quote, Compass, Search, Globe, Megaphone, Code2,
-  CheckCircle2, AlertCircle, Layers, Split, LineChart, FileText,
+  CheckCircle2, AlertCircle, Layers, Split, LineChart, FileText, Users,
 } from 'lucide-react'
 
 const NAVY = '#0A1730'
@@ -135,17 +135,36 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* Right — documentary composition */}
+            {/* Right — the operating model, anchored by the real team */}
             <div className="relative mx-auto lg:mx-0 max-w-sm lg:max-w-none w-full">
-              <div className="relative rounded-2xl overflow-hidden ring-1 ring-amber-500/40 shadow-[0_24px_60px_-30px_rgba(10,23,48,0.4)]">
-                <img src="/portfolio/paul-avatar.png" alt="Paul Carrasco, Founder of Core Conversion" className="w-full aspect-[4/5] object-cover" />
-                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl" />
-              </div>
-              <div className="absolute -bottom-6 -left-5 w-40 md:w-48 rounded-xl overflow-hidden ring-1 ring-[rgba(10,23,48,0.15)] shadow-xl hidden sm:block">
-                <img src="/portfolio/team-collage.png" alt="The Core Conversion team" className="w-full aspect-[4/3] object-cover" />
-              </div>
-              <div className="absolute -top-6 -right-5 w-40 md:w-44 rounded-xl overflow-hidden ring-1 ring-[rgba(10,23,48,0.15)] shadow-xl hidden sm:block">
-                <img src="/case-studies/ccoms-hero.png" alt="Core Conversion project work" className="w-full aspect-[16/10] object-cover object-top" />
+              <div className="rounded-2xl overflow-hidden ring-1 ring-amber-500/40 shadow-[0_24px_60px_-30px_rgba(10,23,48,0.4)] cc-canvas-white">
+                {/* one accountable team — real people, not stock */}
+                <div className="relative">
+                  <img src="/portfolio/team-collage.png" alt="The Core Conversion team" className="w-full aspect-[16/10] object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0A1730]/75 via-[#0A1730]/5 to-transparent" aria-hidden />
+                  <p className="absolute bottom-3.5 left-5 text-[12.5px] font-semibold text-white/95 tracking-wide">The team behind every engagement</p>
+                </div>
+                {/* the three pillars from the headline, made concrete */}
+                <div className="relative p-6 md:p-7 border-t cc-rule">
+                  <span className="absolute left-[38px] md:left-[42px] top-10 bottom-10 w-px bg-gradient-to-b from-amber-500 via-[rgba(10,23,48,0.15)] to-amber-500" aria-hidden />
+                  <ul className="space-y-5">
+                    {[
+                      { icon: Compass, t: 'Strategy-Led Thinking', d: 'We diagnose the business before recommending the work.' },
+                      { icon: Layers, t: 'Hands-On Execution', d: 'One team delivers search, content, web, and development.' },
+                      { icon: Users, t: 'One Accountable Team', d: 'Founder-led delivery — no handoffs to strangers.' },
+                    ].map(({ icon: Icon, t, d }) => (
+                      <li key={t} className="relative flex gap-4 items-start">
+                        <span className="relative z-10 w-9 h-9 rounded-lg bg-[#0A1730] flex items-center justify-center shrink-0">
+                          <Icon className="text-amber-400" style={{ width: 18, height: 18 }} />
+                        </span>
+                        <div className="pt-0.5">
+                          <p className="text-[15px] font-bold text-[#0A1730] leading-tight">{t}</p>
+                          <p className="mt-1 text-[13.5px] text-slate-600 leading-snug">{d}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           </div>

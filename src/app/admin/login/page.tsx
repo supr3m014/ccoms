@@ -11,7 +11,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn, user } = useAuth()
+  const { signIn, signInWithGoogle, user, configured } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -28,10 +28,20 @@ export default function AdminLoginPage() {
     const { error } = await signIn(email, password)
 
     if (error) {
-      setError('Invalid email or password')
+      setError(error.message)
       setLoading(false)
-    } else {
-      router.push('/admin')
+    }
+    // On success, the AuthContext user updates and the effect below redirects —
+    // avoids pushing before the admin claim is confirmed (which would bounce).
+  }
+
+  const handleGoogle = async () => {
+    setError('')
+    setLoading(true)
+    const { error } = await signInWithGoogle()
+    if (error) {
+      setError(error.message)
+      setLoading(false)
     }
   }
 
@@ -50,6 +60,12 @@ export default function AdminLoginPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
             <p className="text-gray-600">Sign in to access the CMS admin panel</p>
           </div>
+
+          {!configured && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-700">Firebase isn’t configured in this environment. Add the <code>NEXT_PUBLIC_FIREBASE_*</code> variables (see docs/FIREBASE-SETUP.md).</p>
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -96,6 +112,17 @@ export default function AdminLoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={loading || !configured}
+              className="w-full border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Continue with Google
+            </button>
+          </div>
 
           <div className="mt-6 text-center">
             <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
