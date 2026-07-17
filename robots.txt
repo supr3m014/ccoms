@@ -1,7 +1,5 @@
-User-agent: *
+User-Agent: *
 Allow: /
-
-# Keep private/utility areas out of the index
 Disallow: /admin
 Disallow: /assessment
 
