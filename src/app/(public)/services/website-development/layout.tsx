@@ -1,17 +1,19 @@
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/lib/seo-meta'
+import JsonLd from '@/components/JsonLd'
 
-export const metadata: Metadata = {
-  title: 'Website Development for Business Growth | Core Conversion',
-  description: 'Custom business websites, landing pages, e-commerce, and web platforms built for credibility, search readiness, conversion, performance, and scale.',
-  alternates: { canonical: '/services/website-development' },
-  openGraph: {
-    title: 'Website Development for Business Growth | Core Conversion',
-    description: 'Custom business websites, landing pages, e-commerce, and web platforms built for credibility, search readiness, conversion, performance, and scale.',
-    url: 'https://ccoms.ph/services/website-development',
-    type: 'website',
-  },
+// Title, description, OG, canonical and indexing all resolve through the admin
+// panel (SEO → Meta Editor), falling back to this page's defaults in
+// src/lib/seo-pages.ts. Works in `next dev` and in the static export.
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata('/services/website-development')
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+export default function ServicesWebsiteDevelopmentLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <JsonLd path="/services/website-development" />
+      {children}
+    </>
+  )
 }

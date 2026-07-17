@@ -1,17 +1,9 @@
-import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Digital Marketing & Development Services | Core Conversion',
-  description: 'Explore Core Conversion’s integrated digital marketing, SEO, local search, AI-search, website, mobile app, and AI commercial production services.',
-  alternates: { canonical: '/services' },
-  openGraph: {
-    title: 'Digital Marketing & Development Services | Core Conversion',
-    description: 'Explore Core Conversion’s integrated digital marketing, SEO, local search, AI-search, website, mobile app, and AI commercial production services.',
-    url: 'https://ccoms.ph/services',
-    type: 'website',
-  },
-}
-
-export default function Layout({ children }: { children: React.ReactNode }) {
+// Pass-through only.
+//
+// A layout wraps its child ROUTES too, so if this one emitted metadata or
+// JSON-LD, every /services/* page would inherit it — and /services/seo would
+// render the site-wide schema twice. The hub page therefore owns its own SEO
+// from the (hub) route group next door, which keeps the URL as /services.
+export default function ServicesSectionLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }

@@ -1,13 +1,20 @@
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/lib/seo-meta'
+import JsonLd from '@/components/JsonLd'
 
-// Old route kept only to redirect. Point search engines at the new canonical and
-// keep the old URL out of the index.
-export const metadata: Metadata = {
-  title: 'GEO & AI Search Visibility | Core Conversion',
-  alternates: { canonical: '/services/geo' },
-  robots: { index: false, follow: true },
+// Old route kept only to redirect; its noindex + canonical live in seo-pages.ts.
+// Title, description, OG, canonical and indexing all resolve through the admin
+// panel (SEO → Meta Editor), falling back to this page's defaults in
+// src/lib/seo-pages.ts. Works in `next dev` and in the static export.
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata('/services/aeo')
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+export default function ServicesAeoLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <JsonLd path="/services/aeo" />
+      {children}
+    </>
+  )
 }

@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start -p $PORT",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seo:pull": "node scripts/seo-pull.mjs",
+    "predev": "node scripts/seo-pull.mjs",
+    "prebuild": "node scripts/check-seo-wiring.mjs && node scripts/seo-pull.mjs",
+    "seo:check": "node scripts/check-seo-wiring.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

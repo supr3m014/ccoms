@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "pages": {}
+  },
+  "schema": {
+    "global": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"ProfessionalService\",\n  \"name\": \"Core Conversion\",\n  \"alternateName\": \"CCOMS\",\n  \"url\": \"https://ccoms.ph\",\n  \"logo\": \"https://ccoms.ph/core-conversion.png\",\n  \"description\": \"Strategy-led digital marketing and development agency providing SEO, local SEO, AI-search visibility, websites, mobile apps, and commercial production.\",\n  \"email\": \"hello@ccoms.ph\",\n  \"telephone\": \"+63 992 298 1422\",\n  \"address\": {\n    \"@type\": \"PostalAddress\",\n    \"addressLocality\": \"Biñan\",\n    \"addressRegion\": \"Laguna\",\n    \"addressCountry\": \"PH\"\n  },\n  \"areaServed\": \"PH\",\n  \"sameAs\": []\n}"
+  },
+  "files": {
+    "llms": "# Core Conversion\n\n> Strategy-led digital marketing and development agency in the Philippines.\n> We help businesses replace disconnected marketing activity with a coordinated,\n> measurable path to growth.\n\n## Services\n- [Digital Marketing Services](https://ccoms.ph/services/digital-marketing-services): Coordinated, retained growth programs.\n- [SEO Services](https://ccoms.ph/services/seo): Technical SEO, content architecture, authority development.\n- [Local SEO](https://ccoms.ph/services/local-seo): Google Business Profile, map visibility, local conversion.\n- [GEO & AI Search Visibility](https://ccoms.ph/services/geo): Entity clarity and citation readiness for AI-assisted search.\n- [Website Development](https://ccoms.ph/services/website-development): Business websites, e-commerce, platforms.\n- [Mobile App Development](https://ccoms.ph/services/mobile-app-development): Customer and operational applications.\n- [AI Ad & Commercial Production](https://ccoms.ph/services/ai-ad-commercial-production): Campaign-ready commercial assets.\n\n## Company\n- [About](https://ccoms.ph/about)\n- [Case Studies](https://ccoms.ph/case-studies)\n- [Contact](https://ccoms.ph/contact)",
+    "robots": "User-agent: *\nAllow: /\n\n# Keep private/utility areas out of the index\nDisallow: /admin\nDisallow: /assessment\n\nSitemap: https://ccoms.ph/sitemap.xml"
+  },
+  "sitemap": {},
+  "scripts": {}
+}

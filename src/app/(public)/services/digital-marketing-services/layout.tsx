@@ -1,17 +1,19 @@
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/lib/seo-meta'
+import JsonLd from '@/components/JsonLd'
 
-export const metadata: Metadata = {
-  title: 'Digital Marketing Services for Measurable Growth | Core Conversion',
-  description: 'Build a coordinated digital growth system through the right mix of SEO, content, paid media, websites, automation, analytics, and conversion work.',
-  alternates: { canonical: '/services/digital-marketing-services' },
-  openGraph: {
-    title: 'Digital Marketing Services for Measurable Growth | Core Conversion',
-    description: 'Build a coordinated digital growth system through the right mix of SEO, content, paid media, websites, automation, analytics, and conversion work.',
-    url: 'https://ccoms.ph/services/digital-marketing-services',
-    type: 'website',
-  },
+// Title, description, OG, canonical and indexing all resolve through the admin
+// panel (SEO → Meta Editor), falling back to this page's defaults in
+// src/lib/seo-pages.ts. Works in `next dev` and in the static export.
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata('/services/digital-marketing-services')
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+export default function ServicesDigitalMarketingServicesLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <JsonLd path="/services/digital-marketing-services" />
+      {children}
+    </>
+  )
 }

@@ -1,17 +1,19 @@
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/lib/seo-meta'
+import JsonLd from '@/components/JsonLd'
 
-export const metadata: Metadata = {
-  title: 'GEO & AI Search Visibility Services | Core Conversion',
-  description: 'Improve entity clarity, content structure, evidence, authority, and technical readiness for discovery across AI-assisted search experiences.',
-  alternates: { canonical: '/services/geo' },
-  openGraph: {
-    title: 'GEO & AI Search Visibility Services | Core Conversion',
-    description: 'Improve entity clarity, content structure, evidence, authority, and technical readiness for discovery across AI-assisted search experiences.',
-    url: 'https://ccoms.ph/services/geo',
-    type: 'website',
-  },
+// Title, description, OG, canonical and indexing all resolve through the admin
+// panel (SEO → Meta Editor), falling back to this page's defaults in
+// src/lib/seo-pages.ts. Works in `next dev` and in the static export.
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata('/services/geo')
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+export default function ServicesGeoLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <JsonLd path="/services/geo" />
+      {children}
+    </>
+  )
 }

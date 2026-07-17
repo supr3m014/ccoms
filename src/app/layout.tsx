@@ -1,11 +1,17 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
+import { SITE_ORIGIN } from '@/lib/seo-routes'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
+// Site-wide fallbacks only. Every public page sets its own title/description/
+// canonical/robots through generateMetadata → pageMetadata (see
+// src/lib/seo-pages.ts + the admin Meta Editor), so nothing here is a per-page
+// SEO decision. metadataBase makes relative canonical/OG URLs resolve.
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_ORIGIN),
   title: 'Core Conversion Digital Marketing Services - CCOMS',
   description: 'Technical SEO, development, and digital strategy—tailored to your business goals and built to increase rankings, leads, and revenue.',
   keywords: 'SEO, digital marketing, website development, mobile apps, AEO, GEO, brand design, video production',

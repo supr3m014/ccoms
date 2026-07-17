@@ -1,17 +1,19 @@
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/lib/seo-meta'
+import JsonLd from '@/components/JsonLd'
 
-export const metadata: Metadata = {
-  title: 'Mobile App Development for Business & SaaS Products | Core Conversion',
-  description: 'Plan, design, build, and launch mobile apps supported by the right product logic, backend, integrations, analytics, and long-term development path.',
-  alternates: { canonical: '/services/mobile-app-development' },
-  openGraph: {
-    title: 'Mobile App Development for Business & SaaS Products | Core Conversion',
-    description: 'Plan, design, build, and launch mobile apps supported by the right product logic, backend, integrations, analytics, and long-term development path.',
-    url: 'https://ccoms.ph/services/mobile-app-development',
-    type: 'website',
-  },
+// Title, description, OG, canonical and indexing all resolve through the admin
+// panel (SEO → Meta Editor), falling back to this page's defaults in
+// src/lib/seo-pages.ts. Works in `next dev` and in the static export.
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata('/services/mobile-app-development')
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+export default function ServicesMobileAppDevelopmentLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <JsonLd path="/services/mobile-app-development" />
+      {children}
+    </>
+  )
 }

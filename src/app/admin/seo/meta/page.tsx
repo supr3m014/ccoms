@@ -1,17 +1,27 @@
 'use client'
 
 // Meta Editor — Firestore-backed (doc: seo_config/meta).
-// Overrides the <title>, meta description and OG tags of the REAL marketing
-// pages. Applied by scripts/bake-seo.mjs at deploy time (rewrites out/*.html).
-// Leave a field blank to keep whatever the page already ships with.
+//
+// Overrides each page's title, description, OG tags, canonical URL and
+// indexing directives. Applied by src/lib/seo-meta.ts through Next's
+// generateMetadata, so changes show up on localhost (after a refresh) exactly
+// as they will live — no post-build rewriting.
+//
+// Leave a field blank / on "Default" to keep whatever the page ships with.
 
 import { useState, useEffect, useMemo } from 'react'
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore'
 import { getDb } from '@/lib/firebase'
-import { PUBLIC_ROUTES, TITLE_MAX, DESC_MAX, type MetaOverride } from '@/lib/seo-routes'
-import { Save, RotateCcw, Search, Info } from 'lucide-react'
+import { TITLE_MAX, DESC_MAX, type MetaOverride } from '@/lib/seo-routes'
+import { ALL_ROUTES, PAGE_SEO } from '@/lib/seo-pages'
+import { Save, RotateCcw, Search, Info, EyeOff } from 'lucide-react'
 
 type Pages = Record<string, MetaOverride>
+
+/** undefined = inherit the page's own default; true/false = force it. */
+type TriState = 'default' | 'yes' | 'no'
+const toTri = (v: boolean | undefined): TriState => (v === undefined ? 'default' : v ? 'yes' : 'no')
+const fromTri = (v: TriState): boolean | undefined => (v === 'default' ? undefined : v === 'yes')
 
 export default function SEOMetaPage() {
   const [pages, setPages] = useState<Pages>({})
@@ -38,24 +48,28 @@ export default function SEOMetaPage() {
 
   const filtered = useMemo(() => {
     const t = term.trim().toLowerCase()
-    return t ? PUBLIC_ROUTES.filter((r) => r.label.toLowerCase().includes(t) || r.path.toLowerCase().includes(t)) : PUBLIC_ROUTES
+    return t ? ALL_ROUTES.filter((r) => r.label.toLowerCase().includes(t) || r.path.toLowerCase().includes(t)) : ALL_ROUTES
   }, [term])
 
-  const set = (path: string, field: keyof MetaOverride, value: string) =>
+  const set = (path: string, field: keyof MetaOverride, value: string | boolean | undefined) =>
     setPages((p) => ({ ...p, [path]: { ...p[path], [field]: value } }))
 
   const save = async () => {
     setSaving(true); setStatus('')
     try {
-      // strip empty strings so blanks mean "leave the page's own tag alone"
+      // Strip empty strings and 'default' directives so blanks always mean
+      // "leave the page's own value alone".
       const clean: Pages = {}
       for (const [path, o] of Object.entries(pages)) {
-        const e = Object.fromEntries(Object.entries(o || {}).filter(([, v]) => (v || '').trim() !== ''))
+        const e = Object.fromEntries(
+          Object.entries(o || {}).filter(([, v]) =>
+            typeof v === 'boolean' ? true : (v ?? '').toString().trim() !== ''),
+        )
         if (Object.keys(e).length) clean[path] = e as MetaOverride
       }
       await setDoc(doc(getDb(), 'seo_config', 'meta'), { pages: clean, updatedAt: Timestamp.now() }, { merge: true })
       setPages(clean); setSaved(clean)
-      setStatus('Saved. Applied to the live pages on the next deploy.')
+      setStatus('Saved. Refresh localhost to preview; deploy to publish.')
     } catch (err) {
       console.error(err); setStatus('Save failed — please try again.')
     } finally { setSaving(false) }
@@ -72,7 +86,7 @@ export default function SEOMetaPage() {
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Meta Editor</h1>
-          <p className="text-gray-600">Tune the title, description and social preview of your live pages.</p>
+          <p className="text-gray-600">Tune the title, description, social preview, canonical URL and indexing of every page.</p>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => setPages(saved)} disabled={!dirty}
@@ -100,12 +114,23 @@ export default function SEOMetaPage() {
         <div className="space-y-4">
           {filtered.map(({ path, label }) => {
             const o = pages[path] || {}
+            const own = PAGE_SEO[path]?.seo
+            const noindex = o.noindex ?? own?.noindex ?? false
             return (
               <div key={path} className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-baseline justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">{label}</h3>
-                  <code className="text-xs text-gray-500">{path}</code>
+                <div className="flex items-baseline justify-between mb-1 gap-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    {label}
+                    {noindex && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                        <EyeOff className="w-3 h-3" /> not indexed
+                      </span>
+                    )}
+                  </h3>
+                  <code className="text-xs text-gray-500 shrink-0">{path}</code>
                 </div>
+                <p className="text-xs text-gray-400 mb-4 truncate">Default title: {own?.title || '—'}</p>
+
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <div className="flex justify-between mb-1">
@@ -136,6 +161,34 @@ export default function SEOMetaPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                 </div>
+
+                {/* Indexing + canonical — independent, per page */}
+                <div className="mt-4 pt-4 border-t border-gray-100 grid md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Indexing</label>
+                    <select value={toTri(o.noindex)} onChange={(e) => set(path, 'noindex', fromTri(e.target.value as TriState))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white">
+                      <option value="default">Default ({own?.noindex ? 'noindex' : 'index'})</option>
+                      <option value="no">Index — allow in search results</option>
+                      <option value="yes">Noindex — keep out of search results</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Link following</label>
+                    <select value={toTri(o.nofollow)} onChange={(e) => set(path, 'nofollow', fromTri(e.target.value as TriState))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white">
+                      <option value="default">Default ({own?.nofollow ? 'nofollow' : 'follow'})</option>
+                      <option value="no">Follow — crawl links on this page</option>
+                      <option value="yes">Nofollow — don’t crawl links</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Canonical URL</label>
+                    <input value={o.canonical || ''} onChange={(e) => set(path, 'canonical', e.target.value)}
+                      placeholder={own?.canonical || path}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
               </div>
             )
           })}
@@ -145,8 +198,9 @@ export default function SEOMetaPage() {
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2"><Info className="w-4 h-4" /> How these apply</h3>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Blank fields keep whatever the page already ships with — nothing is overwritten by accident.</li>
-          <li>• Saved instantly to the database; the live pages update on the <strong>next deploy</strong> (build → bake → push).</li>
+          <li>• Blank fields and “Default” keep whatever the page already ships with — nothing is overwritten by accident.</li>
+          <li>• <strong>Noindex</strong> also removes the page from <code>sitemap.xml</code> automatically — the two can’t contradict each other.</li>
+          <li>• Saved instantly to the database. <strong>Refresh localhost to preview</strong>, deploy to publish to ccoms.ph.</li>
           <li>• Titles over {TITLE_MAX} and descriptions over {DESC_MAX} characters usually get truncated by Google.</li>
         </ul>
       </div>

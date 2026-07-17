@@ -1,17 +1,19 @@
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/lib/seo-meta'
+import JsonLd from '@/components/JsonLd'
 
-export const metadata: Metadata = {
-  title: 'About Core Conversion — Strategy-Led, Execution-Proven',
-  description: 'Core Conversion is a founder-led digital marketing and development agency. Meet the team, the operating model, and the philosophy behind coordinated, measurable growth.',
-  alternates: { canonical: '/about' },
-  openGraph: {
-    title: 'About Core Conversion — Strategy-Led, Execution-Proven',
-    description: 'A founder-led digital marketing and development agency. Meet the team, the operating model, and the philosophy behind coordinated, measurable growth.',
-    url: 'https://ccoms.ph/about',
-    type: 'website',
-  },
+// Title, description, OG, canonical and indexing all resolve through the admin
+// panel (SEO → Meta Editor), falling back to this page's defaults in
+// src/lib/seo-pages.ts. Works in `next dev` and in the static export.
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata('/about')
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+export default function AboutLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <JsonLd path="/about" />
+      {children}
+    </>
+  )
 }

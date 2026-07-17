@@ -1,17 +1,19 @@
 import type { Metadata } from 'next'
+import { pageMetadata } from '@/lib/seo-meta'
+import JsonLd from '@/components/JsonLd'
 
-export const metadata: Metadata = {
-  title: 'Local SEO Services for Calls, Bookings & Visits | Core Conversion',
-  description: 'Improve Google Business Profile, map visibility, local pages, reviews, citations, website conversion, and tracking for location-based businesses.',
-  alternates: { canonical: '/services/local-seo' },
-  openGraph: {
-    title: 'Local SEO Services for Calls, Bookings & Visits | Core Conversion',
-    description: 'Improve Google Business Profile, map visibility, local pages, reviews, citations, website conversion, and tracking for location-based businesses.',
-    url: 'https://ccoms.ph/services/local-seo',
-    type: 'website',
-  },
+// Title, description, OG, canonical and indexing all resolve through the admin
+// panel (SEO → Meta Editor), falling back to this page's defaults in
+// src/lib/seo-pages.ts. Works in `next dev` and in the static export.
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMetadata('/services/local-seo')
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+export default function ServicesLocalSeoLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <JsonLd path="/services/local-seo" />
+      {children}
+    </>
+  )
 }
