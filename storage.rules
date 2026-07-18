@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Core Conversion — Storage rules.
+//
+// media/         → site assets uploaded from the admin Media Library. Publicly
+//                  readable (they are embedded in public pages), admin-write.
+// client_files/  → per-client deliverables (Reports & Files). Admin-only both
+//                  ways for now; the client portal will add per-client reads.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    match /media/{file=**} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 25 * 1024 * 1024;
+    }
+
+    match /client_files/{clientId}/{file=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

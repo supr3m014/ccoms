@@ -8,6 +8,7 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator, type Auth } from 'firebase/auth'
 import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore'
+import { getStorage, type FirebaseStorage } from 'firebase/storage'
 
 const config = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -44,6 +45,13 @@ export function getDb(): Firestore {
   const db = getFirestore(getApp())
   connectEmulators(null, db)
   return db
+}
+
+// Firebase Storage (media library, client files). The default bucket must be
+// initialized once in the Firebase console (Storage → Get started); until
+// then uploads fail with storage/unknown — the Media pages surface that.
+export function getStorageClient(): FirebaseStorage {
+  return getStorage(getApp())
 }
 
 function connectEmulators(auth: Auth | null, db: Firestore | null) {

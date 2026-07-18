@@ -1,243 +1,128 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
-import { Edit, Trash2, Eye, Clock, CheckCircle, FileText } from 'lucide-react'
+// All Posts — Firestore-backed (collection: blog_posts). Publishing here makes
+// the post live on /blog immediately; edit links use ?id= because dynamic
+// route params can't exist in a static export.
 
-interface Post {
-  id: string
-  title: string
-  slug: string
-  status: string
-  author_id: string
-  created_at: string
-  updated_at: string
-  published_at: string | null
-}
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { getDb } from '@/lib/firebase'
+import type { BlogPost } from '@/lib/blog'
+import { Plus, Search, Pencil, Trash2, ExternalLink, FileText } from 'lucide-react'
 
 export default function AllPostsPage() {
-  const [posts, setPosts] = useState<Post[]>([])
+  const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
+  const [term, setTerm] = useState('')
 
   useEffect(() => {
-    fetchPosts()
+    const q = query(collection(getDb(), 'blog_posts'), orderBy('updated_at', 'desc'))
+    return onSnapshot(q, (snap) => {
+      setPosts(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<BlogPost, 'id'>) })))
+      setLoading(false)
+    }, () => setLoading(false))
   }, [])
 
-  const fetchPosts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setPosts(data || [])
-    } catch (error) {
-      console.error('Error fetching posts:', error)
-    } finally {
-      setLoading(false)
-    }
+  const remove = async (p: BlogPost) => {
+    if (!confirm(`Delete “${p.title}” permanently?`)) return
+    await deleteDoc(doc(getDb(), 'blog_posts', p.id))
   }
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Are you sure you want to delete "${title}"?`)) return
-
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      fetchPosts()
-    } catch (error) {
-      console.error('Error deleting post:', error)
-      alert('Failed to delete post')
-    }
-  }
-
-  const filteredPosts = posts.filter(post => {
-    if (filter === 'all') return true
-    return post.status === filter
-  })
-
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      published: 'bg-green-100 text-green-800',
-      draft: 'bg-gray-100 text-gray-800',
-      pending_review: 'bg-yellow-100 text-yellow-800',
-      scheduled: 'bg-blue-100 text-blue-800',
-    }
-    return styles[status as keyof typeof styles] || styles.draft
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'published':
-        return <CheckCircle className="w-4 h-4" />
-      case 'scheduled':
-        return <Clock className="w-4 h-4" />
-      default:
-        return <FileText className="w-4 h-4" />
-    }
-  }
-
-  const formatDate = (date: string | null) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+  const toggleStatus = async (p: BlogPost) => {
+    await updateDoc(doc(getDb(), 'blog_posts', p.id), {
+      status: p.status === 'published' ? 'draft' : 'published',
+      updated_at: serverTimestamp(),
+      ...(p.status !== 'published' && !p.published_at && { published_at: serverTimestamp() }),
     })
   }
 
+  const shown = posts
+    .filter((p) => filter === 'all' || p.status === filter)
+    .filter((p) => !term.trim() || p.title.toLowerCase().includes(term.toLowerCase()) || p.slug.includes(term.toLowerCase()))
+
   return (
     <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">All Posts</h1>
-          <p className="text-gray-600">Manage your blog posts</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">All Posts</h1>
+          <p className="text-gray-600 text-sm">{posts.length} post{posts.length !== 1 ? 's' : ''} · {posts.filter(p => p.status === 'published').length} published</p>
         </div>
-        <Link
-          href="/admin/posts/new"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-        >
-          Add New Post
+        <Link href="/admin/posts/new"
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold text-sm">
+          <Plus className="w-4 h-4" /> Create New Post
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="p-4 border-b border-gray-200 flex items-center gap-4">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-              filter === 'all'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            All ({posts.length})
-          </button>
-          <button
-            onClick={() => setFilter('published')}
-            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-              filter === 'published'
-                ? 'bg-green-100 text-green-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Published ({posts.filter(p => p.status === 'published').length})
-          </button>
-          <button
-            onClick={() => setFilter('draft')}
-            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-              filter === 'draft'
-                ? 'bg-gray-100 text-gray-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Draft ({posts.filter(p => p.status === 'draft').length})
-          </button>
-          <button
-            onClick={() => setFilter('scheduled')}
-            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-              filter === 'scheduled'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Scheduled ({posts.filter(p => p.status === 'scheduled').length})
-          </button>
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+          {(['all', 'published', 'draft'] as const).map((f) => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${filter === f ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+              {f}
+            </button>
+          ))}
         </div>
-
-        {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading posts...</div>
-        ) : filteredPosts.length === 0 ? (
-          <div className="p-12 text-center">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No posts found</h3>
-            <p className="text-gray-600 mb-4">Get started by creating your first blog post</p>
-            <Link
-              href="/admin/posts/new"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-            >
-              Create Your First Post
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredPosts.map((post) => (
-                  <tr key={post.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{post.title}</span>
-                      </div>
-                      <div className="text-sm text-gray-500 mt-1">/{post.slug}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(post.status)}`}>
-                        {getStatusIcon(post.status)}
-                        {post.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {post.status === 'published' ? formatDate(post.published_at) : formatDate(post.created_at)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {post.status === 'published' && (
-                          <Link
-                            href={`/blog/${post.slug}`}
-                            target="_blank"
-                            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="View"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Link>
-                        )}
-                        <Link
-                          href={`/admin/posts/${post.id}`}
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(post.id, post.title)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search posts…"
+            className="pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-gray-400 outline-none w-64" />
+        </div>
       </div>
+
+      {loading ? (
+        <div className="bg-white rounded-lg shadow-md p-12 text-center text-gray-500">Loading…</div>
+      ) : shown.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-md p-12 text-center">
+          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">{posts.length === 0 ? 'No posts yet — write your first one.' : 'Nothing matches the filter.'}</p>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">TITLE</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">STATUS</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 hidden md:table-cell">CATEGORIES</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 hidden md:table-cell">UPDATED</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {shown.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/posts/edit?id=${p.id}`} className="font-medium text-gray-900 hover:text-blue-600">{p.title}</Link>
+                    <p className="text-xs text-gray-400 font-mono">/{p.slug}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => toggleStatus(p)} title="Click to toggle publish state"
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {p.status}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-500">{(p.categories || []).join(', ') || '—'}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-xs text-gray-500">{p.updated_at?.toDate().toLocaleDateString()}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      {p.status === 'published' && (
+                        <a href={`/blog/read?slug=${p.slug}`} target="_blank" rel="noreferrer" title="View live"
+                          className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><ExternalLink className="w-4 h-4" /></a>
+                      )}
+                      <Link href={`/admin/posts/edit?id=${p.id}`} title="Edit"
+                        className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><Pencil className="w-4 h-4" /></Link>
+                      <button onClick={() => remove(p)} title="Delete"
+                        className="p-1.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

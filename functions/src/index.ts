@@ -18,6 +18,7 @@ if (!getApps().length) initializeApp()
 const db = getFirestore()
 
 export { chatStart, onChatMessageCreated, onChatSessionUpdated, submitContact, sendSupportEmail } from './support'
+export { adminUsers } from './users'
 
 /* ── Approved options (must match src/lib/leads.ts) ─────────────────── */
 

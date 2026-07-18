@@ -1,291 +1,128 @@
 'use client'
 
-import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Upload, Loader2, CheckCircle, XCircle, ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
-import { useToast } from '@/contexts/ToastContext'
+// Add Media — drag & drop (or pick) multiple files; uploads go to Firebase
+// Storage with live progress, and each finished file gets a `media` doc so
+// the Library can list it. This route used to 404 — it now exists for real.
 
-interface UploadProgress {
-  filename: string
-  progress: number
-  status: 'uploading' | 'success' | 'error'
+import { useState, useRef, useCallback } from 'react'
+import Link from 'next/link'
+import { uploadMedia, formatBytes, isBucketMissing } from '@/lib/media'
+import StorageSetupNotice from '@/components/admin/StorageSetupNotice'
+import { UploadCloud, CheckCircle2, AlertCircle, Copy, Check, ArrowLeft, Loader2 } from 'lucide-react'
+
+interface UploadRow {
+  key: string
+  name: string
+  size: number
+  pct: number
+  status: 'uploading' | 'done' | 'error'
+  url?: string
   error?: string
 }
 
-export default function UploadMediaPage() {
-  const { showToast } = useToast()
-  const [files, setFiles] = useState<File[]>([])
-  const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState<Map<string, UploadProgress>>(new Map())
-  const [dragActive, setDragActive] = useState(false)
+const MAX_MB = 25
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
-  }
+export default function AddMediaPage() {
+  const [rows, setRows] = useState<UploadRow[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const [needsSetup, setNeedsSetup] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const getFileType = (filename: string) => {
-    const ext = filename.split('.').pop()?.toLowerCase()
-    if (!ext) return 'file'
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image'
-    if (['pdf'].includes(ext)) return 'pdf'
-    if (['doc', 'docx', 'txt'].includes(ext)) return 'document'
-    return 'file'
-  }
+  const patch = (key: string, p: Partial<UploadRow>) =>
+    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...p } : r)))
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    const droppedFiles = Array.from(e.dataTransfer.files)
-    addFiles(droppedFiles)
-  }
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      addFiles(Array.from(e.target.files))
-    }
-  }
-
-  const addFiles = (newFiles: File[]) => {
-    // Filter by max 100MB per file
-    const validFiles = newFiles.filter(f => {
-      if (f.size > 100 * 1024 * 1024) {
-        showToast(`${f.name} is too large (max 100MB)`, 'error')
-        return false
+  const startUploads = useCallback((files: FileList | File[]) => {
+    for (const file of Array.from(files)) {
+      const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      if (file.size > MAX_MB * 1024 * 1024) {
+        setRows((rs) => [{ key, name: file.name, size: file.size, pct: 0, status: 'error', error: `Over the ${MAX_MB} MB limit` }, ...rs])
+        continue
       }
-      return true
-    })
-    setFiles(prev => [...prev, ...validFiles])
+      setRows((rs) => [{ key, name: file.name, size: file.size, pct: 0, status: 'uploading' }, ...rs])
+      const { done } = uploadMedia(file, (pct) => patch(key, { pct }))
+      done
+        .then((item) => patch(key, { status: 'done', pct: 100, url: item.url }))
+        .catch((err) => {
+          if (isBucketMissing(err)) setNeedsSetup(true)
+          patch(key, { status: 'error', error: 'Upload failed' })
+        })
+    }
+  }, [])
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (e.dataTransfer.files?.length) startUploads(e.dataTransfer.files)
   }
 
-  const removeFile = (filename: string) => {
-    setFiles(prev => prev.filter(f => f.name !== filename))
-  }
-
-  const uploadFiles = async () => {
-    if (files.length === 0) {
-      showToast('Please select files to upload', 'warning')
-      return
-    }
-
-    setUploading(true)
-    const newProgress = new Map()
-
-    for (const file of files) {
-      newProgress.set(file.name, {
-        filename: file.name,
-        progress: 0,
-        status: 'uploading' as const
-      })
-    }
-    setUploadProgress(newProgress)
-
-    let successCount = 0
-    for (const file of files) {
-      try {
-        // Update progress to 30%
-        setUploadProgress(prev => {
-          const m = new Map(prev); const it = m.get(file.name)
-          if (it) { it.progress = 30; m.set(file.name, it) }; return m
-        })
-
-        // Actually upload the file to the PHP server
-        const formData = new FormData()
-        formData.append('file', file)
-        const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}?action=upload`, {
-          method: 'POST',
-          body: formData,
-        })
-        const uploadData = await uploadRes.json()
-        if (uploadData.error) throw new Error(uploadData.error)
-
-        setUploadProgress(prev => {
-          const m = new Map(prev); const it = m.get(file.name)
-          if (it) { it.progress = 70; m.set(file.name, it) }; return m
-        })
-
-        const { error } = await supabase.from('media').insert([{
-          filename: file.name,
-          file_url: uploadData.url,
-          file_type: getFileType(file.name),
-          file_size: file.size,
-        }])
-        if (error) throw error
-
-        setUploadProgress(prev => {
-          const newMap = new Map(prev)
-          newMap.set(file.name, {
-            filename: file.name,
-            progress: 100,
-            status: 'success'
-          })
-          return newMap
-        })
-        successCount++
-      } catch (error: any) {
-        setUploadProgress(prev => {
-          const newMap = new Map(prev)
-          newMap.set(file.name, {
-            filename: file.name,
-            progress: 100,
-            status: 'error',
-            error: error.message || 'Upload failed'
-          })
-          return newMap
-        })
-      }
-    }
-
-    setUploading(false)
-    if (successCount === files.length) {
-      showToast('All files uploaded successfully!', 'success')
-      setFiles([])
-      setUploadProgress(new Map())
-    }
+  const copyUrl = async (row: UploadRow) => {
+    if (!row.url) return
+    await navigator.clipboard.writeText(row.url)
+    setCopied(row.key)
+    setTimeout(() => setCopied(null), 1500)
   }
 
   return (
-    <div className="p-8">
-      <Link
-        href="/admin/media"
-        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Media Library
-      </Link>
+    <div className="p-8 max-w-3xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-1">Add Media</h1>
+        <p className="text-gray-600 text-sm">Upload images and files, then copy their URLs for posts, featured images, or OG images.</p>
+      </div>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload Media</h1>
-      <p className="text-gray-600 mb-8">Add images, documents, and other files to your media library</p>
-
-      <div className="grid grid-cols-3 gap-8">
-        {/* Upload Area */}
-        <div className="col-span-2">
+      {needsSetup ? (
+        <StorageSetupNotice />
+      ) : (
+        <>
           <div
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition ${
-              dragActive
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 bg-gray-50 hover:border-gray-400'
-            }`}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={onDrop}
+            onClick={() => inputRef.current?.click()}
+            className={`cursor-pointer border-2 border-dashed rounded-2xl p-12 text-center transition-colors ${dragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50/40'}`}
           >
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Drag files here to upload</h2>
-            <p className="text-sm text-gray-600 mb-4">or</p>
-            <label className="inline-block">
-              <input
-                type="file"
-                multiple
-                onChange={handleFileInput}
-                className="hidden"
-                disabled={uploading}
-              />
-              <span className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium cursor-pointer inline-block transition">
-                Select Files
-              </span>
-            </label>
-            <p className="text-xs text-gray-500 mt-4">Max 100MB per file</p>
+            <UploadCloud className={`w-12 h-12 mx-auto mb-3 ${dragOver ? 'text-blue-500' : 'text-gray-300'}`} />
+            <p className="font-semibold text-gray-900">Drop files here, or click to choose</p>
+            <p className="text-sm text-gray-500 mt-1">Images, PDFs, videos — up to {MAX_MB} MB each</p>
+            <input ref={inputRef} type="file" multiple className="hidden"
+              onChange={(e) => { if (e.target.files?.length) startUploads(e.target.files); e.target.value = '' }} />
           </div>
 
-          {/* Upload Progress */}
-          {uploadProgress.size > 0 && (
-            <div className="mt-8 space-y-4">
-              <h3 className="font-semibold text-gray-900">Upload Status</h3>
-              {Array.from(uploadProgress.values()).map((item) => (
-                <div key={item.filename} className="bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-900">{item.filename}</span>
-                    {item.status === 'success' && (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
+          {rows.length > 0 && (
+            <div className="mt-6 space-y-2">
+              {rows.map((r) => (
+                <div key={r.key} className="bg-white border border-gray-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    {r.status === 'uploading' && <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />}
+                    {r.status === 'done' && <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />}
+                    {r.status === 'error' && <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
+                      <p className="text-xs text-gray-400">{formatBytes(r.size)}{r.error ? ` — ${r.error}` : ''}</p>
+                    </div>
+                    {r.status === 'done' && (
+                      <button onClick={() => copyUrl(r)}
+                        className="inline-flex items-center gap-1 border border-gray-200 hover:bg-gray-50 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-600 shrink-0">
+                        {copied === r.key ? <><Check className="w-3.5 h-3.5 text-green-600" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy URL</>}
+                      </button>
                     )}
-                    {item.status === 'error' && (
-                      <XCircle className="w-5 h-5 text-red-500" />
-                    )}
-                    {item.status === 'uploading' && (
-                      <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                    )}
+                    {r.status === 'uploading' && <span className="text-xs text-gray-500 shrink-0">{r.pct}%</span>}
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full transition-all ${
-                        item.status === 'success'
-                          ? 'bg-green-500'
-                          : item.status === 'error'
-                          ? 'bg-red-500'
-                          : 'bg-blue-500'
-                      }`}
-                      style={{ width: `${item.progress}%` }}
-                    />
-                  </div>
-                  {item.error && (
-                    <p className="text-xs text-red-600 mt-2">{item.error}</p>
+                  {r.status === 'uploading' && (
+                    <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${r.pct}%` }} />
+                    </div>
                   )}
                 </div>
               ))}
             </div>
           )}
-        </div>
 
-        {/* File List */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Files to Upload ({files.length})</h3>
-          {files.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-8">No files selected</p>
-          ) : (
-            <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
-              {files.map((file) => (
-                <div key={file.name} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                    <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
-                  </div>
-                  <button
-                    onClick={() => removeFile(file.name)}
-                    className="ml-2 text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={uploadFiles}
-            disabled={uploading || files.length === 0}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4" />
-                Upload Files
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+          <Link href="/admin/media" className="mt-6 inline-flex items-center gap-2 text-sm text-blue-600 font-semibold">
+            <ArrowLeft className="w-4 h-4" /> Back to Media Library
+          </Link>
+        </>
+      )}
     </div>
   )
 }

@@ -113,6 +113,62 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // ── Content (blog CMS) ───────────────────────────────────────────────
+    // The public site reads published posts; drafts are admin-only.
+    match /blog_posts/{id} {
+      allow get, list: if resource.data.status == 'published' || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Visitors submit comments (always pending, validated); only approved
+    // ones are publicly readable. Moderation is admin-only.
+    match /blog_comments/{id} {
+      allow get, list: if resource.data.status == 'approved' || isAdmin();
+      allow create: if isAdmin() || (
+        request.resource.data.status == 'pending' &&
+        request.resource.data.post_slug is string &&
+        request.resource.data.post_slug.size() > 0 &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() >= 1 &&
+        request.resource.data.name.size() <= 80 &&
+        request.resource.data.content is string &&
+        request.resource.data.content.size() >= 3 &&
+        request.resource.data.content.size() <= 3000
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    // Categories/tags picker doc.
+    match /blog_config/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Media library index (files live in Storage) ──────────────────────
+    match /media/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Clients suite (admin side of the client portal blueprint) ────────
+    // Client-facing access comes later with its own scoped rules.
+    match /clients/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /orders/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /payments/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /client_files/{id} {
+      allow read, write: if isAdmin();
+    }
+    match /client_messages/{clientId} {
+      allow read, write: if isAdmin();
+      match /messages/{id} {
+        allow read, write: if isAdmin();
+      }
+    }
+
     // Default deny for anything else.
     match /{document=**} {
       allow read, write: if false;

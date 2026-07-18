@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, useInView } from 'framer-motion'
 import Link from 'next/link'
 import { Grid, List, Search, Calendar, User, Loader2, FileText } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 
 function AnimatedSection({ children, className = "" }: { children: React.ReactNode, className?: string }) {
   const ref = useRef(null)
@@ -46,12 +45,19 @@ export default function BlogPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from('blog_posts')
-      .select('id, title, slug, excerpt, featured_image, author, published_at, created_at')
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
-      .then(({ data }: any) => { setPosts(data || []); setLoading(false) })
+    // Firestore is dynamic-imported so the public bundle stays Firebase-free
+    // until this page actually needs data (spec §19). Posts published in the
+    // admin CMS appear here immediately — same behavior on localhost and live.
+    import('@/lib/blog')
+      .then(async ({ fetchPublishedPosts, tsToIso }) => {
+        const docs = await fetchPublishedPosts()
+        setPosts(docs.map((p) => ({
+          id: p.id, title: p.title, slug: p.slug, excerpt: p.excerpt,
+          featured_image: p.featured_image, author: p.author,
+          published_at: tsToIso(p.published_at), created_at: tsToIso(p.created_at) || '',
+        })))
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
 

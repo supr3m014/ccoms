@@ -1,259 +1,141 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { Grid3x3, List, Upload, Search, Image as ImageIcon, FileText } from 'lucide-react'
+// Media Library — Firebase Storage + Firestore `media` docs. Upload lives at
+// /admin/media/upload; here you browse, copy URLs (for posts, featured
+// images, OG images) and delete.
 
-interface Media {
-  id: string
-  filename: string
-  file_url: string
-  file_type: string
-  file_size: number
-  created_at: string
-}
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { listMedia, deleteMedia, isImage, formatBytes, isBucketMissing, type MediaItem } from '@/lib/media'
+import StorageSetupNotice from '@/components/admin/StorageSetupNotice'
+import { Grid3x3, List, Upload, Search, FileText, Copy, Trash2, Check } from 'lucide-react'
 
 export default function MediaLibraryPage() {
-  const [media, setMedia] = useState<Media[]>([])
+  const [media, setMedia] = useState<MediaItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [needsSetup, setNeedsSetup] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [filter, setFilter] = useState('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedMedia, setSelectedMedia] = useState<string[]>([])
+  const [filter, setFilter] = useState<'all' | 'images' | 'files'>('all')
+  const [term, setTerm] = useState('')
+  const [copied, setCopied] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchMedia()
-  }, [filter])
+  const load = () =>
+    listMedia()
+      .then((items) => { setMedia(items); setLoading(false) })
+      .catch((err) => { if (isBucketMissing(err)) setNeedsSetup(true); setLoading(false) })
 
-  const fetchMedia = async () => {
-    try {
-      let query = supabase
-        .from('media')
-        .select('*')
-        .order('created_at', { ascending: false })
+  useEffect(() => { load() }, [])
 
-      if (filter !== 'all') {
-        query = query.eq('file_type', filter)
-      }
-
-      const { data, error } = await query
-      if (error) throw error
-      setMedia(data || [])
-    } catch (error) {
-      console.error('Error fetching media:', error)
-    } finally {
-      setLoading(false)
-    }
+  const copyUrl = async (m: MediaItem) => {
+    await navigator.clipboard.writeText(m.url)
+    setCopied(m.id)
+    setTimeout(() => setCopied(null), 1500)
   }
 
-  const handleBulkDelete = async () => {
-    if (selectedMedia.length === 0) {
-      alert('Please select media to delete')
-      return
-    }
-
-    if (!confirm(`Delete ${selectedMedia.length} item(s)?`)) return
-
-    try {
-      const { error } = await supabase
-        .from('media')
-        .delete()
-        .in('id', selectedMedia)
-
-      if (error) throw error
-      setSelectedMedia([])
-      fetchMedia()
-    } catch (error) {
-      console.error('Error deleting media:', error)
-    }
+  const remove = async (m: MediaItem) => {
+    if (!confirm(`Delete “${m.filename}”? Anywhere it is used will show a broken link.`)) return
+    await deleteMedia(m)
+    load()
   }
 
-  const filteredMedia = media.filter(m =>
-    m.filename.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const formatFileSize = (bytes: number) => {
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
-  }
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
-    for (const file of Array.from(files)) {
-      const fileUrl = URL.createObjectURL(file)
-      const fileType = file.type.startsWith('image/') ? 'image' :
-                      file.type.startsWith('video/') ? 'video' :
-                      file.type.startsWith('audio/') ? 'audio' : 'document'
-
-      try {
-        const { error } = await supabase
-          .from('media')
-          .insert([{
-            filename: file.name,
-            file_url: fileUrl,
-            file_type: fileType,
-            file_size: file.size
-          }])
-
-        if (error) throw error
-      } catch (error) {
-        console.error('Error uploading file:', error)
-      }
-    }
-
-    fetchMedia()
-    e.target.value = ''
-  }
+  const shown = media
+    .filter((m) => filter === 'all' || (filter === 'images' ? isImage(m) : !isImage(m)))
+    .filter((m) => !term.trim() || m.filename.toLowerCase().includes(term.toLowerCase()))
 
   return (
     <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Media Library</h1>
-        <label className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors cursor-pointer flex items-center gap-2">
-          <Upload className="w-4 h-4" />
-          Add Media File
-          <input
-            type="file"
-            multiple
-            onChange={handleFileUpload}
-            className="hidden"
-            accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
-          />
-        </label>
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">Media Library</h1>
+          <p className="text-gray-600 text-sm">{media.length} file{media.length !== 1 ? 's' : ''} · copy a URL to use it in posts or SEO images</p>
+        </div>
+        <Link href="/admin/media/upload"
+          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold text-sm">
+          <Upload className="w-4 h-4" /> Add Media
+        </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded text-sm"
-            >
-              <option value="all">All Media</option>
-              <option value="image">Images</option>
-              <option value="video">Videos</option>
-              <option value="audio">Audio</option>
-              <option value="document">Documents</option>
-            </select>
-            <select className="px-3 py-2 border border-gray-300 rounded text-sm">
-              <option value="all">All Dates</option>
-            </select>
-            <button
-              onClick={handleBulkDelete}
-              className="px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
-            >
-              Bulk Delete
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+          {(['all', 'images', 'files'] as const).map((f) => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${filter === f ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+              {f}
             </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search media..."
-              className="px-3 py-2 border border-gray-300 rounded text-sm w-64"
-            />
-            <button className="p-2 border border-gray-300 rounded hover:bg-gray-50">
-              <Search className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 border rounded ${viewMode === 'grid' ? 'bg-blue-50 border-blue-500' : 'border-gray-300'}`}
-            >
-              <Grid3x3 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 border rounded ${viewMode === 'list' ? 'bg-blue-50 border-blue-500' : 'border-gray-300'}`}
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
+          ))}
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search files…"
+            className="pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-gray-400 outline-none w-64" />
+        </div>
+        <div className="ml-auto flex gap-1 bg-gray-100 p-1 rounded-xl">
+          <button onClick={() => setViewMode('grid')} className={`px-3 py-1.5 rounded-lg ${viewMode === 'grid' ? 'bg-white shadow' : ''}`}><Grid3x3 className="w-4 h-4 text-gray-600" /></button>
+          <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-lg ${viewMode === 'list' ? 'bg-white shadow' : ''}`}><List className="w-4 h-4 text-gray-600" /></button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="bg-white rounded-lg shadow-md p-12 text-center text-gray-500">
-          Loading media...
-        </div>
-      ) : filteredMedia.length === 0 ? (
+      {needsSetup ? (
+        <StorageSetupNotice />
+      ) : loading ? (
+        <div className="bg-white rounded-lg shadow-md p-12 text-center text-gray-500">Loading…</div>
+      ) : shown.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
-          <ImageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No media files</h3>
-          <p className="text-gray-600">Upload media through the page/post editor</p>
+          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">{media.length === 0 ? 'No files yet — upload your first.' : 'Nothing matches the filter.'}</p>
         </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {filteredMedia.map((item) => (
-            <div
-              key={item.id}
-              className={`bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transition-all ${
-                selectedMedia.includes(item.id) ? 'ring-2 ring-blue-500' : ''
-              }`}
-              onClick={() => {
-                if (selectedMedia.includes(item.id)) {
-                  setSelectedMedia(selectedMedia.filter(id => id !== item.id))
-                } else {
-                  setSelectedMedia([...selectedMedia, item.id])
-                }
-              }}
-            >
-              <div className="aspect-square bg-gray-100 flex items-center justify-center">
-                {item.file_type === 'image' ? (
-                  <img src={item.file_url} alt={item.filename} className="w-full h-full object-cover" />
-                ) : (
-                  <FileText className="w-12 h-12 text-gray-400" />
-                )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {shown.map((m) => (
+            <div key={m.id} className="group bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="h-32 bg-gray-50 flex items-center justify-center overflow-hidden">
+                {isImage(m)
+                  ? <img src={m.url} alt={m.filename} className="w-full h-full object-cover" loading="lazy" />
+                  : <FileText className="w-10 h-10 text-gray-300" />}
               </div>
               <div className="p-3">
-                <p className="text-sm font-medium text-gray-900 truncate">{item.filename}</p>
-                <p className="text-xs text-gray-500">{formatFileSize(item.file_size)}</p>
+                <p className="text-xs font-medium text-gray-900 truncate" title={m.filename}>{m.filename}</p>
+                <p className="text-[11px] text-gray-400">{formatBytes(m.size)}</p>
+                <div className="mt-2 flex gap-1">
+                  <button onClick={() => copyUrl(m)} title="Copy URL"
+                    className="flex-1 inline-flex items-center justify-center gap-1 border border-gray-200 hover:bg-gray-50 rounded px-2 py-1 text-[11px] font-semibold text-gray-600">
+                    {copied === m.id ? <><Check className="w-3 h-3 text-green-600" /> Copied</> : <><Copy className="w-3 h-3" /> Copy URL</>}
+                  </button>
+                  <button onClick={() => remove(m)} title="Delete"
+                    className="border border-gray-200 hover:bg-red-50 rounded px-2 py-1 text-red-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left">
-                  <input type="checkbox" className="rounded" />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">File</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">FILE</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">TYPE</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">SIZE</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">UPLOADED</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600">ACTIONS</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredMedia.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <input type="checkbox" className="rounded" />
+            <tbody className="divide-y divide-gray-100">
+              {shown.map((m) => (
+                <tr key={m.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <a href={m.url} target="_blank" rel="noreferrer" className="font-medium text-gray-900 hover:text-blue-600">{m.filename}</a>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
-                        {item.file_type === 'image' ? (
-                          <img src={item.file_url} alt={item.filename} className="w-full h-full object-cover rounded" />
-                        ) : (
-                          <FileText className="w-6 h-6 text-gray-400" />
-                        )}
-                      </div>
-                      <span className="font-medium text-gray-900">{item.filename}</span>
+                  <td className="px-4 py-3 text-xs text-gray-500">{m.contentType}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{formatBytes(m.size)}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{m.created_at?.toDate().toLocaleDateString()}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => copyUrl(m)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Copy URL">
+                        {copied === m.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                      <button onClick={() => remove(m)} className="p-1.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600" title="Delete"><Trash2 className="w-4 h-4" /></button>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{item.file_type}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{formatFileSize(item.file_size)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {new Date(item.created_at).toLocaleDateString()}
                   </td>
                 </tr>
               ))}

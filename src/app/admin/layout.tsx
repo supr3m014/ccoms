@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import {
+  collection, onSnapshot, where, getDocs,
+  query as fsQuery, orderBy as fsOrderBy, limit as fsLimit,
+} from 'firebase/firestore'
+import { getDb } from '@/lib/firebase'
+import { ALL_ROUTES } from '@/lib/seo-pages'
 import {
   LayoutDashboard, FileText, Image, FolderOpen, MessageSquare, Search as SearchIcon,
   Settings, Users, Server, ChevronDown, ChevronRight, Bell, User, ExternalLink,
@@ -34,7 +39,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [openTickets, setOpenTickets] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
 
-  const BRIDGE = process.env.NEXT_PUBLIC_API_URL || 'https://ccoms.ph/api-bridge.php'
   const notifCount = liveChats.length + openTickets.length
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
@@ -66,9 +70,6 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       icon: FileText,
       subsections: [
         { name: 'All Pages', href: '/admin/pages' },
-        { name: 'Create New Page', href: '/admin/pages/new' },
-        { name: 'Categories', href: '/admin/pages/categories' },
-        { name: 'Tags', href: '/admin/pages/tags' },
       ]
     },
     {
@@ -77,6 +78,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       subsections: [
         { name: 'All Posts', href: '/admin/posts' },
         { name: 'Create New Post', href: '/admin/posts/new' },
+        { name: 'Categories', href: '/admin/posts/categories' },
+        { name: 'Tags', href: '/admin/posts/tags' },
         { name: 'Comments', href: '/admin/posts/comments' },
       ]
     },
@@ -112,6 +115,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       icon: BarChart3,
       subsections: [
         { name: 'Meta Editor', href: '/admin/seo/meta' },
+        { name: 'Sitemap', href: '/admin/seo/sitemaps' },
         { name: 'File Generator', href: '/admin/seo/files' },
         { name: 'Header / Footer Scripts', href: '/admin/seo/scripts' },
         { name: 'Schema', href: '/admin/seo/schema' },
@@ -120,32 +124,30 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     },
   ]
 
-  // Live notification polling — active chats + open tickets
+  // Live notifications — realtime Firestore listeners (no polling): active
+  // chat sessions and the newest open tickets.
   useEffect(() => {
-    const fetchNotifs = async () => {
-      try {
-        const url = new URL(BRIDGE)
-        url.searchParams.set('action', 'chat-poll')
-        url.searchParams.set('type', 'admin-sessions')
-        const chatData = await fetch(url.toString(), { credentials: 'include' }).then(r => r.json())
-        setLiveChats((chatData.sessions || []).filter((s: any) => s.mode !== 'ended'))
-      } catch {}
-      try {
-        const { data } = await supabase.from('support_tickets')
-          .select('id, subject, visitor_name, created_at, status')
-          .eq('status', 'open')
-          .order('created_at', { ascending: false })
-          .limit(5)
-        setOpenTickets(data || [])
-      } catch {}
-    }
-    fetchNotifs()
-    const interval = setInterval(fetchNotifs, 20000)
-    return () => clearInterval(interval)
-  }, [])
+    if (!user) return
+    let unsubChats = () => {}
+    let unsubTickets = () => {}
+    try {
+      const db = getDb()
+      unsubChats = onSnapshot(
+        fsQuery(collection(db, 'chat_sessions'), where('mode', 'in', ['ai', 'human'])),
+        (snap) => setLiveChats(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+        () => {},
+      )
+      unsubTickets = onSnapshot(
+        fsQuery(collection(db, 'tickets'), where('status', '==', 'open'), fsOrderBy('created_at', 'desc'), fsLimit(5)),
+        (snap) => setOpenTickets(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+        () => {},
+      )
+    } catch { /* not configured */ }
+    return () => { unsubChats(); unsubTickets() }
+  }, [user])
 
   useEffect(() => {
-    if (!loading && !user && pathname !== '/admin/login' && pathname !== '/admin/setup') {
+    if (!loading && !user && pathname !== '/admin/login') {
       router.push('/admin/login')
     }
   }, [user, loading, router, pathname])
@@ -199,30 +201,33 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         return
       }
 
-      if (!supabase) {
-        setSearching(false)
-        return
-      }
-
       setSearching(true)
       try {
         const searchTerm = searchQuery.toLowerCase()
 
-        const [pagesResult, postsResult, categoriesResult, tagsResult] = await Promise.all([
-          supabase.from('pages').select('id, title, slug, status').ilike('title', `%${searchTerm}%`).limit(5),
-          supabase.from('posts').select('id, title, slug, status').ilike('title', `%${searchTerm}%`).limit(5),
-          supabase.from('categories').select('id, name, type').ilike('name', `%${searchTerm}%`).limit(5),
-          supabase.from('tags').select('id, name, type').ilike('name', `%${searchTerm}%`).limit(5)
+        // Site pages come from the code-defined master table; posts and
+        // clients from Firestore. Small datasets — filter client-side.
+        const pageHits = ALL_ROUTES
+          .filter((r) => r.label.toLowerCase().includes(searchTerm) || r.path.toLowerCase().includes(searchTerm))
+          .slice(0, 5)
+          .map((r) => ({ id: r.path, title: r.label, type: 'page', href: '/admin/pages' }))
+
+        const [postsSnap, clientsSnap] = await Promise.all([
+          getDocs(collection(getDb(), 'blog_posts')),
+          getDocs(collection(getDb(), 'clients')),
         ])
+        const postHits = postsSnap.docs
+          .map((d) => ({ id: d.id, ...(d.data() as { title?: string; slug?: string; status?: string }) }))
+          .filter((p) => (p.title || '').toLowerCase().includes(searchTerm) || (p.slug || '').includes(searchTerm))
+          .slice(0, 5)
+          .map((p) => ({ id: p.id, title: p.title, status: p.status, type: 'post', href: `/admin/posts/edit?id=${p.id}` }))
+        const clientHits = clientsSnap.docs
+          .map((d) => ({ id: d.id, ...(d.data() as { name?: string; company?: string; client_number?: string }) }))
+          .filter((c) => [c.name, c.company, c.client_number].some((v) => (v || '').toLowerCase().includes(searchTerm)))
+          .slice(0, 5)
+          .map((c) => ({ id: c.id, title: `${c.name}${c.company ? ` — ${c.company}` : ''}`, type: 'client', href: '/admin/clients' }))
 
-        const results = [
-          ...(pagesResult.data || []).map((p: any) => ({ ...p, type: 'page', href: `/admin/pages` })),
-          ...(postsResult.data || []).map((p: any) => ({ ...p, type: 'post', href: `/admin/posts` })),
-          ...(categoriesResult.data || []).map((c: any) => ({ ...c, type: 'category', href: `/admin/${c.type}s/categories` })),
-          ...(tagsResult.data || []).map((t: any) => ({ ...t, type: 'tag', href: `/admin/${t.type}s/tags` }))
-        ]
-
-        setSearchResults(results)
+        setSearchResults([...postHits, ...clientHits, ...pageHits])
       } catch (error) {
         console.error('Search error:', error)
       } finally {
@@ -234,7 +239,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(debounce)
   }, [searchQuery])
 
-  if (pathname === '/admin/login' || pathname === '/admin/setup') {
+  if (pathname === '/admin/login') {
     return <>{children}</>
   }
 

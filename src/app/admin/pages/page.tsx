@@ -1,219 +1,101 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
-import { Edit, Trash2, Eye, FileText } from 'lucide-react'
+// All Pages — the REAL pages of ccoms.ph (they are code, not CMS entries),
+// with live SEO state from Firestore and quick actions. This replaced a
+// WordPress-style page CMS that wrote to a table nothing ever read.
 
-interface Page {
-  id: string
-  title: string
-  slug: string
-  status: string
-  author_id: string
-  created_at: string
-  updated_at: string
-  published_at: string | null
-}
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { doc, getDoc } from 'firebase/firestore'
+import { getDb } from '@/lib/firebase'
+import { effectiveNoindex, type MetaOverride } from '@/lib/seo-routes'
+import { ALL_ROUTES, PAGE_SEO } from '@/lib/seo-pages'
+import { ExternalLink, Pencil, EyeOff, Search, Layers, Braces } from 'lucide-react'
 
 export default function AllPagesPage() {
-  const [pages, setPages] = useState<Page[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all')
+  const [overrides, setOverrides] = useState<Record<string, MetaOverride>>({})
+  const [term, setTerm] = useState('')
 
   useEffect(() => {
-    fetchPages()
+    getDoc(doc(getDb(), 'seo_config', 'meta'))
+      .then((snap) => setOverrides((snap.exists() ? snap.data().pages : {}) || {}))
+      .catch(() => {})
   }, [])
 
-  const fetchPages = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('pages')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setPages(data || [])
-    } catch (error) {
-      console.error('Error fetching pages:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Are you sure you want to delete "${title}"?`)) return
-
-    try {
-      const { error } = await supabase
-        .from('pages')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      fetchPages()
-    } catch (error) {
-      console.error('Error deleting page:', error)
-      alert('Failed to delete page')
-    }
-  }
-
-  const filteredPages = pages.filter(page => {
-    if (filter === 'all') return true
-    return page.status === filter
+  const shown = ALL_ROUTES.filter((r) => {
+    const t = term.trim().toLowerCase()
+    return !t || r.label.toLowerCase().includes(t) || r.path.toLowerCase().includes(t)
   })
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      published: 'bg-green-100 text-green-800',
-      draft: 'bg-gray-100 text-gray-800',
-      pending_review: 'bg-yellow-100 text-yellow-800',
-    }
-    return styles[status as keyof typeof styles] || styles.draft
-  }
-
-  const formatDate = (date: string | null) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">All Pages</h1>
-          <p className="text-gray-600">Manage your website pages</p>
-        </div>
-        <Link
-          href="/admin/pages/new"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-        >
-          Add New Page
-        </Link>
+    <div className="p-8 max-w-5xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-1">All Pages</h1>
+        <p className="text-gray-600 text-sm">
+          Every page of ccoms.ph with its live SEO state. Titles, descriptions and indexing are tuned in the{' '}
+          <Link href="/admin/seo/meta" className="text-blue-600 font-semibold">Meta Editor</Link>; new pages are built as part of the site itself.
+        </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="p-4 border-b border-gray-200 flex items-center gap-4">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-              filter === 'all'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            All ({pages.length})
-          </button>
-          <button
-            onClick={() => setFilter('published')}
-            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-              filter === 'published'
-                ? 'bg-green-100 text-green-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Published ({pages.filter(p => p.status === 'published').length})
-          </button>
-          <button
-            onClick={() => setFilter('draft')}
-            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-              filter === 'draft'
-                ? 'bg-gray-100 text-gray-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Draft ({pages.filter(p => p.status === 'draft').length})
-          </button>
-        </div>
+      <div className="mb-4 relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search pages…"
+          className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-gray-400 outline-none" />
+      </div>
 
-        {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading pages...</div>
-        ) : filteredPages.length === 0 ? (
-          <div className="p-12 text-center">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No pages found</h3>
-            <p className="text-gray-600 mb-4">Get started by creating your first page</p>
-            <Link
-              href="/admin/pages/new"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-            >
-              Create Your First Page
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredPages.map((page) => (
-                  <tr key={page.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{page.title}</span>
-                      </div>
-                      <div className="text-sm text-gray-500 mt-1">/{page.slug}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(page.status)}`}>
-                        {page.status.replace('_', ' ')}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">PAGE</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 hidden md:table-cell">EFFECTIVE TITLE</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600">INDEXING</th>
+              <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {shown.map(({ path, label }) => {
+              const o = overrides[path]
+              const own = PAGE_SEO[path]?.seo
+              const noindex = effectiveNoindex(o, own)
+              const title = (o?.title || '').trim() || own?.title || '—'
+              const overridden = Boolean((o?.title || '').trim() || (o?.description || '').trim())
+              return (
+                <tr key={path} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-gray-300 shrink-0" />{label}
+                    </p>
+                    <p className="text-xs text-gray-400 font-mono ml-6">{path}</p>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    <p className="text-xs text-gray-600 truncate max-w-xs" title={title}>{title}</p>
+                    {overridden && <p className="text-[11px] text-blue-600 font-semibold">customized in Meta Editor</p>}
+                  </td>
+                  <td className="px-4 py-3">
+                    {noindex ? (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        <EyeOff className="w-3 h-3" /> noindex
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {page.status === 'published' ? formatDate(page.published_at) : formatDate(page.created_at)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {page.status === 'published' && (
-                          <Link
-                            href={`/${page.slug}`}
-                            target="_blank"
-                            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="View"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Link>
-                        )}
-                        <Link
-                          href={`/admin/pages/${page.id}`}
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(page.id, page.title)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">indexed</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <a href={`https://ccoms.ph${path === '/' ? '' : path}`} target="_blank" rel="noreferrer" title="View live"
+                        className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><ExternalLink className="w-4 h-4" /></a>
+                      <Link href="/admin/seo/meta" title="Edit SEO"
+                        className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><Pencil className="w-4 h-4" /></Link>
+                      <Link href="/admin/seo/schema" title="Schema"
+                        className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><Braces className="w-4 h-4" /></Link>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   )
