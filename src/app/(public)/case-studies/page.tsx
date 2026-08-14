@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useAnimation } from 'framer-motion'
 import CTAButtons from '@/components/CTAButtons'
-import { Code2, ArrowRight, CheckCircle2, ChevronRight, Cpu, Layout, Globe, Search, Database, Smartphone, Zap, Shield, BarChart3, MapPin, ZoomIn, ChevronLeft, Quote, X, ExternalLink } from 'lucide-react'
+import { Code2, ArrowRight, CheckCircle2, ChevronRight, Cpu, Layout, Globe, Search, Database, Smartphone, Zap, Shield, BarChart3, MapPin, ZoomIn, ChevronLeft, Quote, X, ExternalLink, QrCode } from 'lucide-react'
 
 interface CaseStudy {
   title: string
@@ -20,7 +20,7 @@ interface CaseStudy {
     stack: string[]
     focus: string[]
   }
-  type: 'web-dev' | 'seo'
+  type: 'web-dev' | 'seo' | 'mobile-app'
   slug: string
   seoContent?: {
     context: string
@@ -36,6 +36,11 @@ interface CaseStudy {
   }
   externalProofLink?: string
   liveUrl?: string
+  // Mobile-app proof: a "scan to try it yourself" demo QR, same asset used on the portfolio deck.
+  demoQr?: {
+    image: string
+    caption: string
+  }
 }
 
 // Enhanced Image Lightbox Modal with Pan & Zoom
@@ -318,6 +323,60 @@ function ImageCarousel({ images, title, onOpenModal }: { images: string[], title
   )
 }
 
+// Mobile-app proof gallery: phone screenshots are portrait, so they render as a
+// grid of phone-shaped cards (matching the portfolio deck) instead of being
+// force-cropped into ImageCarousel's 16:9 frame. Includes the same "scan to
+// try it yourself" QR used on the deck, when the case study provides one.
+function MobileAppGallery({
+  images,
+  title,
+  demoQr,
+  onOpenModal
+}: {
+  images: string[]
+  title: string
+  demoQr?: { image: string; caption: string }
+  onOpenModal: (index: number) => void
+}) {
+  if (!images || images.length === 0) return null
+
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-slate-50 p-6 md:p-8">
+      <div className="flex flex-wrap justify-center gap-4">
+        {images.map((src, i) => (
+          <button
+            key={src}
+            onClick={() => onOpenModal(i)}
+            className="group relative cursor-zoom-in"
+          >
+            <img
+              src={src}
+              alt={`${title} app screen ${i + 1}`}
+              loading="lazy"
+              className="w-28 md:w-36 rounded-2xl shadow-xl border border-neutral-200 group-hover:shadow-2xl group-hover:-translate-y-1 transition-all"
+            />
+            <div className="absolute inset-0 rounded-2xl bg-blue-600/0 group-hover:bg-blue-600/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <ZoomIn className="w-6 h-6 text-white drop-shadow-lg" />
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {demoQr && (
+        <div className="mt-6 flex items-center gap-4 bg-white border border-neutral-200 rounded-2xl px-5 py-4 max-w-sm mx-auto">
+          <img src={demoQr.image} alt={`Scan to try ${title}`} className="w-20 h-20 rounded-lg shrink-0" />
+          <div>
+            <p className="font-bold text-neutral-900 text-sm flex items-center gap-1.5">
+              <QrCode className="w-3.5 h-3.5 text-blue-600" /> Try it yourself
+            </p>
+            <p className="text-xs text-neutral-500 leading-relaxed mt-0.5">{demoQr.caption}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const caseStudies: CaseStudy[] = [
   // --- WEB DEVELOPMENT CATEGORY ---
   {
@@ -380,6 +439,52 @@ const caseStudies: CaseStudy[] = [
     technicalSummary: {
       stack: ['Vite', 'React', 'Replicate AI', 'Lemon Squeezy'],
       focus: ['Data Ownership', 'Generative Design']
+    }
+  },
+  {
+    slug: 'qr-seal-mobile-experience',
+    title: 'QR Seal',
+    subtitle: 'The Customer-Facing Scan Experience',
+    category: 'Mobile App · Brand Touchpoint',
+    type: 'mobile-app',
+    images: ['/portfolio/apps/qrseal-app-1.png', '/portfolio/apps/qrseal-app-2.png', '/portfolio/apps/qrseal-app-3.png'],
+    objective: 'Give brand customers a scan experience that feels intentional and unmistakably on-brand — not a generic black-and-white code bolted onto a menu, sign, or package.',
+    highlights: [
+      { icon: Layout, title: 'Branded QR Touchpoints', description: 'QR codes that feel aligned with the business, not disconnected from it.' },
+      { icon: CheckCircle2, title: 'Editable After Printing', description: 'Update destinations anytime — no reprinting menus, signs, packaging, or campaigns.' },
+      { icon: BarChart3, title: 'Scan Intelligence', description: 'Track scans, locations, devices, and interaction history per code.' },
+      { icon: Shield, title: 'Brand-Controlled Platform', description: 'Manage campaigns, templates, and exports from one clean dashboard.' }
+    ],
+    technicalSummary: {
+      stack: ['Mobile-Optimized Web App', 'Live Scan Analytics'],
+      focus: ['Brand-First UX', 'Editable-After-Print Codes']
+    },
+    demoQr: {
+      image: '/portfolio/apps/qrseal-demo-qr.png',
+      caption: 'Scan with your phone to preview the customer-side experience.'
+    }
+  },
+  {
+    slug: 'cafe-pos',
+    title: 'Cafe POS',
+    subtitle: 'Run Your Business. Not Just Your Register.',
+    category: 'Mobile App · Point-of-Sale',
+    type: 'mobile-app',
+    images: ['/portfolio/apps/pos-01.jpg', '/portfolio/apps/pos-02.jpg', '/portfolio/apps/pos-03.jpg', '/portfolio/apps/pos-04.jpg'],
+    objective: 'Replace a generic register with a mobile-first point-of-sale platform staff can run from a phone or tablet — faster checkout, live inventory, and an AI copilot for the owner.',
+    highlights: [
+      { icon: Zap, title: 'Faster Checkout', description: 'Every interaction designed to reduce friction at the counter.' },
+      { icon: Database, title: 'Smarter Operations', description: 'Monitor inventory, staff, and sales from one unified platform.' },
+      { icon: BarChart3, title: 'Better Decisions', description: 'Daily transactions turned into actionable business insights.' },
+      { icon: Cpu, title: 'AI Business Copilot', description: 'CCOMS AI analyzes operations data and recommends smarter decisions.' }
+    ],
+    technicalSummary: {
+      stack: ['Mobile & Tablet POS', 'Real-Time Inventory Sync', 'CCOMS AI Copilot'],
+      focus: ['Checkout Speed', 'Operational Visibility']
+    },
+    demoQr: {
+      image: '/portfolio/apps/pos-demo-qr.png',
+      caption: 'Scan with your phone to open the interactive POS mock (staff PIN: 1234).'
     }
   },
   {
@@ -509,7 +614,7 @@ const caseStudies: CaseStudy[] = [
 ]
 
 export default function CaseStudiesPage() {
-  const [filter, setFilter] = useState<'all' | 'web-dev' | 'seo'>('all')
+  const [filter, setFilter] = useState<'all' | 'web-dev' | 'mobile-app' | 'seo'>('all')
   const [modalData, setModalData] = useState<{ images: string[], index: number } | null>(null)
 
   const filteredStudies = caseStudies.filter(study =>
@@ -572,6 +677,7 @@ export default function CaseStudiesPage() {
               {[
                 { id: 'all', label: 'All Projects' },
                 { id: 'web-dev', label: 'Web Development' },
+                { id: 'mobile-app', label: 'Mobile Apps' },
                 { id: 'seo', label: 'SEO & Local SEO' }
               ].map((tab) => (
                 <button
@@ -604,18 +710,27 @@ export default function CaseStudiesPage() {
                   transition={{ duration: 0.7, ease: "easeOut" }}
                   className={`flex flex-col ${index % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-12 lg:items-start`}
                 >
-                  {study.type === 'web-dev' ? (
-                    // Web Dev Layout (unchanged)
+                  {study.type !== 'seo' ? (
+                    // Web Dev / Mobile App Layout (shared content side; gallery differs)
                     <>
-                      {/* Gallery/Carousel Side */}
+                      {/* Gallery Side — carousel for web screenshots, phone grid for mobile apps */}
                       <div className="w-full lg:w-1/2">
-                        <div className="relative group rounded-2xl overflow-hidden shadow-2xl border border-neutral-200">
-                          <ImageCarousel
+                        {study.type === 'mobile-app' ? (
+                          <MobileAppGallery
                             images={study.images}
                             title={study.title}
+                            demoQr={study.demoQr}
                             onOpenModal={(imgIndex) => setModalData({ images: study.images, index: imgIndex })}
                           />
-                        </div>
+                        ) : (
+                          <div className="relative group rounded-2xl overflow-hidden shadow-2xl border border-neutral-200">
+                            <ImageCarousel
+                              images={study.images}
+                              title={study.title}
+                              onOpenModal={(imgIndex) => setModalData({ images: study.images, index: imgIndex })}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* Content Side */}
